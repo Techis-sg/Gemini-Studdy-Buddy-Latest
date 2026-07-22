@@ -59,7 +59,55 @@ interface PageContentProps {
   onChangeNewDashTarget: (v: string) => void;
   onCreateDashboard: (e: React.FormEvent) => void;
   onCloseNewDash: () => void;
+  activeTab?: string;
 }
+
+const PAGE_HEADER_CONFIG: Record<string, { badge: string; title: string; description?: string }> = {
+  dashboard: {
+    badge: "WORKSPACE TRACK CONSOLE",
+    title: "",
+  },
+  tasks: {
+    badge: "DAILY TARGET WORKSPACE",
+    title: "Task Workspace",
+    description: "Search, sort, filter, and modify individual syllabus daily targets.",
+  },
+  subjects: {
+    badge: "SYLLABUS MODULE TRACKS",
+    title: "Subject Tracks & Syllabus Coverage",
+    description: "Configure subjects, timelines, marks distribution, and track percentage completion.",
+  },
+  calendar: {
+    badge: "REVISION & SCHEDULING",
+    title: "Study Master Calendar",
+    description: "Navigate months and click on days to view detailed scheduled targets in the side panel.",
+  },
+  history: {
+    badge: "AUDIT & TIME LOGS",
+    title: "Portal Activity History",
+    description: "Read-only immutable tracking log of workspace actions, authentication sessions, and study hours.",
+  },
+  uploads: {
+    badge: "RESOURCES & NOTES",
+    title: "Study Materials & Uploads",
+    description: "Upload and manage textbooks, reference notes, past papers, and review slides. Files are associated with respective syllabus tracks.",
+  },
+  settings: {
+    badge: "ACCOUNT & PREFERENCES",
+    title: "User Profile Settings",
+    description: "Configure secure credentials, visual preferences, notification frequencies, and private details.",
+  },
+  kanban: {
+    badge: "WORKFLOW BOARD",
+    title: "Kanban Board",
+    description: "Drag, drop, and organize study tasks across progress workflows.",
+  },
+  overview: {
+    badge: "ANALYTICS & METRICS",
+    title: "Analytics & Insights",
+    description: "Visualize learning velocity, study time breakdown, and completion performance.",
+  },
+};
 
 export function PageContent({
   user,
@@ -74,24 +122,38 @@ export function PageContent({
   onChangeNewDashTarget,
   onCreateDashboard,
   onCloseNewDash,
+  activeTab = "dashboard",
 }: PageContentProps) {
+  const config = PAGE_HEADER_CONFIG[activeTab] || PAGE_HEADER_CONFIG.dashboard;
+  const userName = user?.name ? user.name.split(" ")[0] : "Scholar";
+
+  const isDashboard = activeTab === "dashboard";
+  const displayTitle = isDashboard
+    ? `Welcome back, ${userName}! 👋`
+    : config.title;
+
   return (
     <main className="flex-1 bg-[#FAFAFC] dark:bg-[#0f172a] cosmic:bg-[#022c22] overflow-y-auto flex flex-col min-h-[85vh] transition-colors">
       <div className="p-5 md:p-8 flex flex-col gap-6 flex-1">
-        {/* Top Greeting and Sub-Bar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        {/* Top Header Bar */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-700">
           <div>
-            <span className="text-[10px] font-bold bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full text-indigo-700 uppercase tracking-wider">
-              Workspace Track Console
+            <span className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-800 px-2.5 py-0.5 rounded-full text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+              {config.badge}
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight uppercase mt-1">
-              Welcome back, {user?.name ? user.name.split(" ")[0] : "Scholar"}! 👋
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight uppercase mt-1">
+              {displayTitle}
             </h2>
+            {!isDashboard && config.description && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
+                {config.description}
+              </p>
+            )}
           </div>
 
           {/* Date Highlight right in the dashboard header */}
           <div className="flex flex-wrap items-center gap-2.5">
-            <span id="header-today-date" className="px-3 py-1.5 bg-slate-50 border border-slate-200 font-bold text-xs rounded-xl shadow-sm text-slate-700">
+            <span id="header-today-date" className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs rounded-xl shadow-sm text-slate-700 dark:text-slate-200">
               🗓️ {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} (Today)
             </span>
           </div>

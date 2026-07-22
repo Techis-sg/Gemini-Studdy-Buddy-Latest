@@ -1136,6 +1136,92 @@ app.delete("/api/user/delete-account", async (req, res) => {
   }
 });
 
+// Helper for asynchronous AI sentiment & aspect-based semantic analysis
+async function classifyFeedbackAsync(feedbackId: string, message: string) {
+  let aiTag = "Neutral";
+  const lowerMsg = message.toLowerCase();
+
+  // 1. First-pass rule-based sentiment & semantic signals for immediate high reliability
+  const negativeKeywords = [
+    "not working", "not good", "not nice", "not great", "not helpful", "not so good",
+    "issue", "bug", "error", "broken", "crash", "failed", "fix", "glitch",
+    "problem", "cannot", "cant", "can't", "wrong", "unable", "worst", "terrible",
+    "hate", "bad", "useless", "disappointed", "horrible", "fuck", "shit", "sucks",
+    "garbage", "trash", "poor", "rubbish", "failing", "flaw"
+  ];
+
+  const demandingKeywords = [
+    "add", "feature", "would be nice", "please allow", "request", "suggestion",
+    "enhancement", "option", "need", "want", "demand", "implement", "could you",
+    "can you", "hope you can", "would like", "should have", "bring back"
+  ];
+
+  const positiveKeywords = [
+    "great", "awesome", "love", "excellent", "good", "nice", "best", "super",
+    "helpful", "amazing", "wonderful", "perfect", "thank", "kudos", "brilliant"
+  ];
+
+  if (negativeKeywords.some((kw) => lowerMsg.includes(kw))) {
+    aiTag = "Negative";
+  } else if (demandingKeywords.some((kw) => lowerMsg.includes(kw))) {
+    aiTag = "Demanding";
+  } else if (positiveKeywords.some((kw) => lowerMsg.includes(kw)) && !lowerMsg.includes("not ") && !lowerMsg.includes("worst")) {
+    aiTag = "Positive";
+  }
+
+  // 2. Perform deep Gemini AI Sentiment Analysis and Aspect-based Semantic Analysis
+  if (ai) {
+    try {
+      const prompt = `You are an expert AI Sentiment and Aspect-Based Semantic Classifier for user feedback in an educational study portal.
+
+Perform comprehensive Sentiment Analysis (evaluating emotional tone, frustration, satisfaction, anger, praise, or neutrality) AND Aspect-Based Semantic Analysis (evaluating user intent, e.g. feature demands vs bug complaints/frustration vs general feedback).
+
+Analyze the user feedback message below and classify it into EXACTLY ONE tag from this strict list of 4 allowed tags:
+- "Positive": User expresses praise, satisfaction, appreciation, good experience, or gratitude.
+- "Negative": User expresses frustration, complaint, criticism, discontent, anger, reports bugs/issues/broken functionality, or uses profanity.
+- "Demanding": User asks for or demands new features, enhancements, capabilities, options, or functionality in the portal.
+- "Neutral": User provides general, non-opinionated, informational statements, queries, or neutral feedback.
+
+Examples for reference:
+- "Hey this is not working man some issues are coming up." -> Negative
+- "not nice man not so good. worst portal I have seen ever. FUCK you man." -> Negative
+- "Please add dark mode toggle and option to export study plan to PDF" -> Demanding
+- "This portal is super helpful for my GATE preparation, love it!" -> Positive
+- "I use this portal on my laptop running Windows" -> Neutral
+
+User Message: "${message}"
+
+Respond with ONLY the single tag word (one of: Positive, Negative, Demanding, Neutral).`;
+
+      const aiRes = await generateContentWithFallback({
+        contents: prompt,
+        config: {
+          temperature: 0.0,
+          maxOutputTokens: 10,
+        },
+      });
+
+      const rawText = aiRes.response?.text()?.trim() || "";
+      const cleanTag = rawText.replace(/[^a-zA-Z]/g, "").trim();
+      if (cleanTag) {
+        const normalizedTag = cleanTag.charAt(0).toUpperCase() + cleanTag.slice(1).toLowerCase();
+        if (["Positive", "Negative", "Demanding", "Neutral"].includes(normalizedTag)) {
+          aiTag = normalizedTag;
+        }
+      }
+    } catch (aiErr) {
+      console.warn("Async AI feedback classification error:", aiErr);
+    }
+  }
+
+  // Save the classified tag to DB asynchronously
+  try {
+    await saveFeedback({ id: feedbackId, ai_tag: aiTag });
+  } catch (err) {
+    console.error("Failed to update feedback ai_tag asynchronously:", err);
+  }
+}
+
 // --- Feedback API ---
 app.post("/api/feedback", async (req, res) => {
   try {
@@ -1166,81 +1252,31 @@ app.post("/api/feedback", async (req, res) => {
       });
     }
 
-    // 2. Parse message to AI or smart classifier for one-word tag/flag categorization
-    let aiTag = type === "issue" ? "Bug" : "Constructive";
-
-    // Rule-based keyword pre-classification to ensure immediate high accuracy for common patterns
-    const lowerMsg = sanitizedMsg.toLowerCase();
-    const bugKeywords = ["not working", "issue", "bug", "error", "broken", "crash", "failed", "fix", "glitch", "problem", "cannot", "cant", "wrong", "unable"];
-    const featureKeywords = ["add", "feature", "would be nice", "please allow", "request", "suggestion", "enhancement", "option"];
-    const praiseKeywords = ["great", "awesome", "love", "excellent", "good", "nice", "best", "super", "helpful", "amazing"];
-    const negativeKeywords = ["terrible", "worst", "hate", "bad", "useless", "disappointed", "horrible"];
-
-    if (bugKeywords.some((kw) => lowerMsg.includes(kw))) {
-      aiTag = "Bug";
-    } else if (featureKeywords.some((kw) => lowerMsg.includes(kw))) {
-      aiTag = "Feature";
-    } else if (praiseKeywords.some((kw) => lowerMsg.includes(kw))) {
-      aiTag = "Good";
-    } else if (negativeKeywords.some((kw) => lowerMsg.includes(kw))) {
-      aiTag = "Bad";
-    }
-
-    if (ai) {
-      try {
-        const prompt = `You are an AI feedback classifier for an educational study portal.
-Analyze the user message below and categorize it with EXACTLY ONE word tag from this list:
-- "Bug" (if user reports something broken, not working, errors, glitch, or technical problems)
-- "Feature" (if user asks for new capabilities or enhancements)
-- "Good" (if user gives positive praise)
-- "Bad" (if user expresses frustration or negative feedback)
-- "Constructive" (if user gives helpful advice or UI/UX suggestions)
-- "Spam" (if gibberish or non-sensical)
-
-User Message: "${sanitizedMsg}"
-
-Respond with ONLY the single category word (e.g., Bug, Feature, Good, Bad, Constructive, Spam).`;
-
-        const aiRes = await generateContentWithFallback({
-          contents: prompt,
-          config: {
-            temperature: 0.0,
-            maxOutputTokens: 10,
-          },
-        });
-
-        const rawText = aiRes.response?.text()?.trim() || "";
-        const cleanTag = rawText.replace(/[^a-zA-Z0-9]/g, "").trim();
-        if (cleanTag) {
-          const normalizedTag = cleanTag.charAt(0).toUpperCase() + cleanTag.slice(1).toLowerCase();
-          const validTags = ["Bug", "Feature", "Good", "Bad", "Constructive", "Spam", "Worst", "Excellent"];
-          if (validTags.includes(normalizedTag)) {
-            aiTag = normalizedTag;
-          }
-        }
-      } catch (aiErr) {
-        console.warn("AI tag classification fallback due to error:", aiErr);
-      }
-    }
-
-    // 3. Save to DB with schema: user_id, user_email, user_name, date, feedback_message, ai_tag, type, screenshots
+    // 2. Initial immediate save to DB with preliminary tag
     const feedbackDoc = {
       user_id: userId,
       user_email: String(email).trim(),
       user_name: String(name).trim(),
       date: new Date().toISOString(),
       feedback_message: sanitizedMsg,
-      ai_tag: aiTag,
+      ai_tag: "Neutral",
       type: type,
       screenshots: Array.isArray(screenshots) ? screenshots.slice(0, 5) : [],
     };
 
-    await saveFeedback(feedbackDoc);
+    const feedbackId = await saveFeedback(feedbackDoc);
 
+    // 3. Immediate response to user (workflow unaffected)
     res.json({
       success: true,
       message: type === "issue" ? "Issue report submitted successfully." : "Feedback submitted successfully.",
-      ai_tag: aiTag,
+    });
+
+    // 4. Asynchronous background Sentiment and Aspect-Based Semantic Analysis
+    setImmediate(() => {
+      classifyFeedbackAsync(feedbackId, sanitizedMsg).catch((err) => {
+        console.warn("Background feedback classification task failed:", err);
+      });
     });
   } catch (err: any) {
     console.error("Feedback submission error:", err);

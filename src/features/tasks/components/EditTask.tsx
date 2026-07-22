@@ -134,7 +134,9 @@ export default function EditTask({
       const totalMinutes = timeLogs.reduce((acc, curr) => acc + Number(curr.minutes || 0), 0);
 
       let nextCol = task.boardColumnId;
-      if (status === "Completed") {
+      if (status === "Revision") {
+        nextCol = "revision";
+      } else if (status === "Completed") {
         nextCol = "completed";
       } else if (status === "In Progress") {
         if (nextCol !== "in_progress" && nextCol !== "revision") {

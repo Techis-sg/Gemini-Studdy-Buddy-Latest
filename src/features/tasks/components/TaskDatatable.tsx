@@ -163,17 +163,8 @@ export default function TaskDatatable({
 
   return (
     <div className="bg-white border border-slate-100 p-6 shadow-sm rounded-3xl">
-      {/* Header and Controls */}
-      <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center mb-5 pb-4 border-b border-slate-100">
-        <div>
-          <h3 className="text-md sm:text-lg font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wide">
-            📋 Task Workspace
-          </h3>
-          <p className="text-slate-400 text-[10px] font-mono mt-0.5">
-            Search, sort, filter, and modify individual syllabus daily targets.
-          </p>
-        </div>
-
+      {/* Header Controls */}
+      <div className="flex flex-wrap items-center justify-end gap-2.5 w-full mb-5 pb-4 border-b border-slate-100">
         {/* View Mode buttons and Add button */}
         <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto">
           <div className="flex border border-slate-200 bg-slate-50 rounded-xl overflow-hidden shadow-sm">

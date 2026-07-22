@@ -507,16 +507,6 @@ export function ProfileSettings({
 
   return (
     <div className="space-y-6">
-      {/* Top Title Section */}
-      <div className="border-b border-slate-100 pb-4">
-        <div>
-          <h2 className="text-xl font-bold font-sans text-slate-800">User Profile Settings</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Configure secure credentials, visual preferences, notification frequencies, and private details.
-          </p>
-        </div>
-      </div>
-
       {/* Tabs Row (Line Variant) */}
       <div className="flex border-b border-slate-100 flex-wrap gap-1">
         {[

@@ -391,18 +391,8 @@ export function HistoryLogs({ user, tasks }: HistoryLogsProps) {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="border-b border-slate-100 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold font-sans text-slate-800 flex items-center gap-2">
-            <History className="w-5 h-5 text-indigo-600" />
-            Portal Activity History
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Read-only immutable tracking log of workspace actions, authentication sessions, and study hours.
-          </p>
-        </div>
-
+      {/* Page Header Actions */}
+      <div className="border-b border-slate-100 pb-4 flex justify-end items-center gap-4">
         {/* Dynamic Study Hours Balance Header Card */}
         <div className="flex gap-4">
           <div className="bg-slate-50 border border-slate-100 px-4 py-2.5 rounded-2xl flex items-center gap-3">

@@ -249,15 +249,20 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
     if (!draggedTask) return;
 
     const statusMap: Record<string, Task["status"]> = {
+      backlog: "Not Started",
+      today: "Not Started",
       todo: "Not Started",
       in_progress: "In Progress",
       completed: "Completed",
+      revision: "Revision",
     };
+
+    const targetStatus = statusMap[targetColId] || draggedTask.status;
 
     const updatedDragged = {
       ...draggedTask,
       boardColumnId: targetColId as any,
-      status: statusMap[targetColId],
+      status: targetStatus,
     };
 
     const targetIndex = currentList.findIndex(t => t.id === targetTaskId);
@@ -390,6 +395,7 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
 
       <PageContent
         user={user}
+        activeTab={activeTab}
         currentDashboard={currentDashboard}
         showAddDash={showAddDash}
         newDashName={newDashName}

@@ -35,7 +35,7 @@ export function Tooltip({ content, children, position = "top" }: TooltipProps) {
       {children}
       {visible && content && (
         <div
-          className={`absolute z-[999] min-w-max bg-[var(--custom-accent,#4f46e5)] text-white text-[10px] font-bold font-mono px-3 py-1.5 rounded-lg shadow-md transition-all duration-150 uppercase tracking-wider pointer-events-none whitespace-pre-line text-left leading-relaxed ${positionClasses[position]}`}
+          className={`absolute z-[9999] bg-[var(--custom-accent,#4f46e5)] text-white text-[10px] font-bold font-mono px-3 py-1.5 rounded-lg shadow-lg transition-all duration-150 uppercase tracking-wider pointer-events-none whitespace-nowrap text-center leading-relaxed ${positionClasses[position]}`}
         >
           {content}
           <div className={`absolute border-4 ${arrowClasses[position]}`} />

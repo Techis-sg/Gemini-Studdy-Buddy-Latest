@@ -394,17 +394,8 @@ export function SubjectDatatable({
 
   return (
     <div className="bg-white border border-slate-100 p-6 shadow-sm rounded-3xl space-y-6">
-      {/* Subject Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
-        <div>
-          <h3 className="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wide">
-            📚 Subject Tracks & Syllabus Coverage
-          </h3>
-          <p className="text-slate-500 text-xs font-mono mt-0.5">
-            Configure subjects, timelines, marks distribution, and track percentage completion.
-          </p>
-        </div>
-
+      {/* Subject Header Actions */}
+      <div className="flex justify-end items-center border-b border-slate-100 pb-5">
         <button
           onClick={openAddModal}
           className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 rounded-xl shadow-sm transition-all cursor-pointer"

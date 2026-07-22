@@ -308,13 +308,17 @@ export async function fetchUserDashboardData(userId: string | undefined): Promis
 
     for (const dId of Object.keys(tasksMap)) {
       for (const t of tasksMap[dId]) {
-        let expectedCol: Task["boardColumnId"] = "backlog";
-        if (t.status === "Completed") {
-          expectedCol = "completed";
-        } else if (t.status === "In Progress") {
-          expectedCol = "in_progress";
-        } else if (t.status === "Revision" || t.boardColumnId === "revision") {
+        let expectedCol: Task["boardColumnId"] = t.boardColumnId || "backlog";
+        if (t.boardColumnId === "revision" || t.status === "Revision") {
           expectedCol = "revision";
+        } else if (t.boardColumnId === "completed" || t.status === "Completed") {
+          expectedCol = "completed";
+        } else if (t.boardColumnId === "in_progress" || t.status === "In Progress") {
+          expectedCol = "in_progress";
+        } else if (t.boardColumnId === "today") {
+          expectedCol = "today";
+        } else if (t.boardColumnId === "backlog") {
+          expectedCol = "backlog";
         } else if (t.date === todayStr) {
           expectedCol = "today";
         } else {
@@ -586,20 +590,25 @@ export async function getHistoryLogs(userId: string | undefined): Promise<any[]>
  * Save user feedback record to Firestore
  */
 export async function saveFeedback(feedback: {
-  user_id: string;
-  user_email: string;
-  user_name: string;
-  date: string;
-  feedback_message: string;
-  ai_tag: string;
-}): Promise<void> {
-  const normUid = getNormalizedUserId(feedback.user_id);
-  const feedbackId = "fb_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+  id?: string;
+  user_id?: string;
+  user_email?: string;
+  user_name?: string;
+  date?: string;
+  feedback_message?: string;
+  ai_tag?: string;
+  type?: string;
+  screenshots?: string[];
+}): Promise<string> {
+  const normUid = feedback.user_id ? getNormalizedUserId(feedback.user_id) : "anonymous";
+  const feedbackId = feedback.id || ("fb_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7));
   const ref = doc(db, "feedbacks", feedbackId);
   try {
     await safeSetDoc(ref, { id: feedbackId, ...feedback }, { merge: true });
+    return feedbackId;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `feedbacks/${feedbackId}`, normUid);
+    return feedbackId;
   }
 }
 

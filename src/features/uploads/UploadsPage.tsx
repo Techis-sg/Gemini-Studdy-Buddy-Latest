@@ -164,17 +164,6 @@ export function UploadsPage({ tasks, subjects }: UploadsPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="border-b border-slate-100 pb-4">
-        <h2 className="text-xl font-bold font-sans text-slate-800 flex items-center gap-2">
-          <Upload className="w-5 h-5 text-indigo-600" />
-          Study Materials & Uploads
-        </h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Upload and manage textbooks, reference notes, past papers, and review slides. Files are associated with respective syllabus tracks.
-        </p>
-      </div>
-
       {/* Upload Zone */}
       <div
         onDragOver={handleDragOver}

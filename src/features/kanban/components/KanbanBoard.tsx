@@ -6,12 +6,11 @@ import { Tooltip } from "@components/ui";
 import { getTodayString, getFormattedTaskId, formatToDisplayDate } from "@utils/index";
 
 export function getKanbanColumnForTask(task: Task, todayStr: string): Task["boardColumnId"] {
-  if (task.status === "Completed") return "completed";
-  if (task.status === "In Progress") return "in_progress";
-  if (task.status === "Revision" || task.boardColumnId === "revision") return "revision";
-
+  if (task.boardColumnId === "revision" || task.status === "Revision") return "revision";
+  if (task.boardColumnId === "completed" || task.status === "Completed") return "completed";
+  if (task.boardColumnId === "in_progress" || task.status === "In Progress") return "in_progress";
+  if (task.boardColumnId === "today") return "today";
   if (task.boardColumnId === "backlog") return "backlog";
-  if (task.boardColumnId === "today" && task.date === todayStr) return "today";
 
   if (task.date === todayStr) return "today";
   return "backlog";
@@ -173,7 +172,7 @@ export default function KanbanBoard({
             today: "Not Started",
             in_progress: "In Progress",
             completed: "Completed",
-            revision: "Completed",
+            revision: "Revision",
           };
           onUpdateTask(id, {
             boardColumnId: targetColId as any,
@@ -199,7 +198,7 @@ export default function KanbanBoard({
   const todayStr = getTodayString();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 font-sans">
+    <div className="flex gap-4 overflow-x-auto pt-1 pb-4 px-1 min-w-full font-sans scrollbar-thin flex-1">
       {columns.map((col) => {
         const colTasks = tasks.filter((t) => getKanbanColumnForTask(t, todayStr) === col.id);
         const isOver = activeDragOverCol === col.id;
@@ -210,7 +209,7 @@ export default function KanbanBoard({
             onDragOver={(e) => handleDragOverColumn(e, col.id)}
             onDrop={(e) => handleColumnDrop(e, col.id)}
             onDragLeave={() => setActiveDragOverCol(null)}
-            className={`flex flex-col bg-white border rounded-3xl min-h-[500px] shadow-sm transition-all duration-200 ${col.containerBg} ${
+            className={`flex flex-col bg-white border rounded-3xl min-h-[660px] h-[calc(100vh-220px)] max-h-[820px] w-[290px] min-w-[280px] lg:w-[calc((100%-4rem)/5)] flex-1 shrink-0 shadow-sm transition-all duration-200 ${col.containerBg} ${
               isOver ? "ring-2 ring-indigo-500/50 bg-indigo-50/10" : ""
             }`}
           >
@@ -222,7 +221,7 @@ export default function KanbanBoard({
                 </span>
                 {col.title}
               </h3>
-              <Tooltip content="Add study target to column" position="top">
+              <Tooltip content="Add study target to column" position="bottom">
                 <button
                   onClick={() => onOpenAddTask(col.id as any)}
                   className="bg-white border border-slate-200 hover:bg-slate-100 p-1.5 rounded-lg shadow-sm transition-all text-slate-500 hover:text-slate-800 cursor-pointer"
@@ -234,7 +233,7 @@ export default function KanbanBoard({
 
             {/* Column Content Dropzone */}
             <div
-              className={`p-4 flex-1 space-y-3 overflow-y-auto max-h-[600px] transition-colors duration-200 rounded-b-3xl ${
+              className={`p-4 flex-1 space-y-3 overflow-y-auto max-h-[calc(100%-60px)] transition-colors duration-200 rounded-b-3xl ${
                 isOver ? "bg-indigo-50/20" : "bg-slate-50/10"
               }`}
             >
@@ -255,48 +254,48 @@ export default function KanbanBoard({
                       onDragEnd={handleDragEnd}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => handleCardDrop(e, task.id, col.id)}
-                      className={`bg-white border border-slate-100 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between gap-3 relative group cursor-grab active:cursor-grabbing ${
+                      className={`bg-white border border-slate-100 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between gap-3 relative group cursor-grab active:cursor-grabbing max-w-full overflow-hidden ${
                         isBeingDragged ? "border-dashed border-2 border-indigo-500 bg-indigo-50/20" : ""
                       }`}
                     >
                       {/* Drag Handle & Info header */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono font-extrabold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100/60 shadow-sm">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-mono font-extrabold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100/60 shadow-sm shrink-0">
                             {displayTaskId}
                           </span>
-                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${getPriorityBadge(task.priority)}`}>
+                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded shrink-0 ${getPriorityBadge(task.priority)}`}>
                             {task.priority}
                           </span>
                         </div>
                         
                         {/* Drag Handle Grip Icon */}
-                        <div className="text-slate-300 group-hover:text-slate-400 transition-colors">
+                        <div className="text-slate-300 group-hover:text-slate-400 transition-colors shrink-0">
                           <GripVertical className="w-3.5 h-3.5" />
                         </div>
                       </div>
 
                       {/* Task Title & Log Time */}
-                      <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-col gap-1.5 min-w-0">
                         <h4
                           onClick={() => onViewTaskDetails && onViewTaskDetails(task)}
-                          className={`font-semibold text-xs sm:text-sm leading-snug transition-colors cursor-pointer hover:text-indigo-600 hover:underline ${
+                          className={`font-semibold text-xs sm:text-sm leading-snug transition-colors cursor-pointer hover:text-indigo-600 hover:underline break-words [overflow-wrap:anywhere] whitespace-normal ${
                             col.id === "completed" ? "line-through text-slate-400 font-normal" : "text-slate-800"
                           }`}
                         >
-                          {col.id === "completed" && <span className="text-emerald-500 mr-1 font-bold">✓</span>}
+                          {col.id === "completed" && <span className="text-emerald-500 mr-1 font-bold shrink-0">✓</span>}
                           {task.title}
                         </h4>
                         
                         {task.subjectId && (
-                          <div className="text-[10px] font-bold text-slate-500 font-mono truncate bg-slate-100/80 px-2 py-0.5 rounded w-max">
+                          <div className="text-[10px] font-bold text-slate-500 font-mono break-words [overflow-wrap:anywhere] whitespace-normal bg-slate-100/80 px-2 py-1 rounded max-w-full w-fit leading-relaxed">
                             📚 {getSubjectName(task.subjectId)}
                           </div>
                         )}
 
                         {task.timeSpentMinutes > 0 && (
-                          <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md flex items-center gap-1 w-max mt-0.5">
-                            <Clock className="w-2.5 h-2.5" />
+                          <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md flex items-center gap-1 w-max mt-0.5 shrink-0">
+                            <Clock className="w-2.5 h-2.5 shrink-0" />
                             {task.timeSpentMinutes}m studied
                           </span>
                         )}

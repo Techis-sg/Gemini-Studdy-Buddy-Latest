@@ -117,9 +117,9 @@ export function FeedbackModal({ isOpen, onClose, user, onSuccessRedirect }: Feed
 
       const data = await res.json();
       if (mode === "issue") {
-        toast.success(`Issue report submitted successfully!`);
+        toast.success("Issue report submitted successfully!");
       } else {
-        toast.success(`Feedback submitted successfully! (Tagged as: ${data.ai_tag})`);
+        toast.success("Feedback submitted successfully!");
       }
 
       setMessage("");
