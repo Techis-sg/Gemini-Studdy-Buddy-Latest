@@ -1140,7 +1140,7 @@ app.delete("/api/user/delete-account", async (req, res) => {
 app.post("/api/feedback", async (req, res) => {
   try {
     const userId = (req.headers["x-user-id"] as string) || "anonymous";
-    const { name, email, message } = req.body;
+    const { name, email, message, type = "feedback", screenshots = [] } = req.body;
 
     if (!name || !email || !message) {
       return res.status(400).json({ error: "Name, email, and message are required fields." });
@@ -1153,24 +1153,58 @@ app.post("/api/feedback", async (req, res) => {
 
     // Check allowed characters: alphanumeric, spaces, and allowed special characters (. , / \ ? ! # -)
     if (!/^[a-zA-Z0-9\s.,/\\?!#-]+$/.test(sanitizedMsg)) {
-      return res.status(400).json({ error: "Only letters, numbers, spaces, and allowed symbols (. , / \\ ? ! # -) are allowed in feedback message." });
+      return res.status(400).json({ error: "Only letters, numbers, spaces, and allowed symbols (. , / \\ ? ! # -) are allowed in message." });
     }
 
     const wordCount = sanitizedMsg.split(/\s+/).filter(Boolean).length;
-    if (sanitizedMsg.length < 5 || sanitizedMsg.length > 255 || wordCount < 2) {
-      return res.status(400).json({ error: "Message must be 5-255 characters long and contain at least 2 words." });
+    const maxChars = type === "issue" ? 600 : 255;
+    const maxWords = type === "issue" ? 100 : 50;
+
+    if (sanitizedMsg.length < 5 || sanitizedMsg.length > maxChars || wordCount < 2 || wordCount > maxWords) {
+      return res.status(400).json({ 
+        error: `Message must be 5-${maxChars} characters long and between 2 and ${maxWords} words.` 
+      });
     }
 
-    // 2. Parse message to AI for one-word tag/flag categorization
-    let aiTag = "Constructive";
+    // 2. Parse message to AI or smart classifier for one-word tag/flag categorization
+    let aiTag = type === "issue" ? "Bug" : "Constructive";
+
+    // Rule-based keyword pre-classification to ensure immediate high accuracy for common patterns
+    const lowerMsg = sanitizedMsg.toLowerCase();
+    const bugKeywords = ["not working", "issue", "bug", "error", "broken", "crash", "failed", "fix", "glitch", "problem", "cannot", "cant", "wrong", "unable"];
+    const featureKeywords = ["add", "feature", "would be nice", "please allow", "request", "suggestion", "enhancement", "option"];
+    const praiseKeywords = ["great", "awesome", "love", "excellent", "good", "nice", "best", "super", "helpful", "amazing"];
+    const negativeKeywords = ["terrible", "worst", "hate", "bad", "useless", "disappointed", "horrible"];
+
+    if (bugKeywords.some((kw) => lowerMsg.includes(kw))) {
+      aiTag = "Bug";
+    } else if (featureKeywords.some((kw) => lowerMsg.includes(kw))) {
+      aiTag = "Feature";
+    } else if (praiseKeywords.some((kw) => lowerMsg.includes(kw))) {
+      aiTag = "Good";
+    } else if (negativeKeywords.some((kw) => lowerMsg.includes(kw))) {
+      aiTag = "Bad";
+    }
+
     if (ai) {
       try {
-        const prompt = `Analyze the following user feedback message for an online study portal and categorize it with EXACTLY ONE word tag or flag (for example: Good, Bad, Worst, Constructive, Bug, Malicious, Feature, Excellent, Spam, Neutral). Respond with ONLY that single word tag, with no punctuation or extra text.\n\nFeedback message: "${sanitizedMsg}"`;
-        
+        const prompt = `You are an AI feedback classifier for an educational study portal.
+Analyze the user message below and categorize it with EXACTLY ONE word tag from this list:
+- "Bug" (if user reports something broken, not working, errors, glitch, or technical problems)
+- "Feature" (if user asks for new capabilities or enhancements)
+- "Good" (if user gives positive praise)
+- "Bad" (if user expresses frustration or negative feedback)
+- "Constructive" (if user gives helpful advice or UI/UX suggestions)
+- "Spam" (if gibberish or non-sensical)
+
+User Message: "${sanitizedMsg}"
+
+Respond with ONLY the single category word (e.g., Bug, Feature, Good, Bad, Constructive, Spam).`;
+
         const aiRes = await generateContentWithFallback({
           contents: prompt,
           config: {
-            temperature: 0.1,
+            temperature: 0.0,
             maxOutputTokens: 10,
           },
         });
@@ -1178,14 +1212,18 @@ app.post("/api/feedback", async (req, res) => {
         const rawText = aiRes.response?.text()?.trim() || "";
         const cleanTag = rawText.replace(/[^a-zA-Z0-9]/g, "").trim();
         if (cleanTag) {
-          aiTag = cleanTag.charAt(0).toUpperCase() + cleanTag.slice(1).toLowerCase();
+          const normalizedTag = cleanTag.charAt(0).toUpperCase() + cleanTag.slice(1).toLowerCase();
+          const validTags = ["Bug", "Feature", "Good", "Bad", "Constructive", "Spam", "Worst", "Excellent"];
+          if (validTags.includes(normalizedTag)) {
+            aiTag = normalizedTag;
+          }
         }
       } catch (aiErr) {
         console.warn("AI tag classification fallback due to error:", aiErr);
       }
     }
 
-    // 3. Save to DB with schema: user_id, user_email, user_name, date, feedback_message, ai_tag
+    // 3. Save to DB with schema: user_id, user_email, user_name, date, feedback_message, ai_tag, type, screenshots
     const feedbackDoc = {
       user_id: userId,
       user_email: String(email).trim(),
@@ -1193,13 +1231,15 @@ app.post("/api/feedback", async (req, res) => {
       date: new Date().toISOString(),
       feedback_message: sanitizedMsg,
       ai_tag: aiTag,
+      type: type,
+      screenshots: Array.isArray(screenshots) ? screenshots.slice(0, 5) : [],
     };
 
     await saveFeedback(feedbackDoc);
 
     res.json({
       success: true,
-      message: "Feedback submitted successfully.",
+      message: type === "issue" ? "Issue report submitted successfully." : "Feedback submitted successfully.",
       ai_tag: aiTag,
     });
   } catch (err: any) {
