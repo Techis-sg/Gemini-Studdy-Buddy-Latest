@@ -400,14 +400,12 @@ export default function CalendarView({
 
                     {/* Actions Row */}
                     <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 mt-0.5">
-                      <Tooltip content="Log active study sessions" position="top">
-                        <button
-                          onClick={() => onOpenTimeTracker(task)}
-                          className="text-[10px] text-indigo-600 hover:text-indigo-800 font-mono font-bold px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-all cursor-pointer flex items-center gap-1"
-                        >
-                          ⏱️ Log Session
-                        </button>
-                      </Tooltip>
+                      <button
+                        onClick={() => onOpenTimeTracker(task)}
+                        className="text-[10px] text-indigo-600 hover:text-indigo-800 font-mono font-bold px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        ⏱️ Log Time
+                      </button>
 
                       <div className="flex items-center gap-1">
                         <Tooltip content="Edit Task" position="top">

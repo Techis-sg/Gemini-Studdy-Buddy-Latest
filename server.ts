@@ -9,6 +9,7 @@ import {
   saveUserProfile,
   getUserProfile,
   getUserProfileByEmail,
+  getUserProfileByGithub,
   saveUserDashboard,
   deleteUserDashboard,
   saveUserTask,
@@ -213,19 +214,23 @@ app.get("/api/auth/me", async (req, res) => {
 // Unified OAuth Handler (Google / GitHub)
 const handleUnifiedOAuth = async (req: express.Request, res: express.Response) => {
   try {
-    const { provider, email, name, avatarUrl, uid } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: "Email is required for authentication." });
+    const { provider, email, name, avatarUrl, uid, github } = req.body;
+    const cleanEmail = email ? email.trim().toLowerCase() : "";
+    const cleanGithub = github ? github.trim().toLowerCase() : "";
+    if (!cleanEmail && !cleanGithub) {
+      return res.status(400).json({ error: "Email or GitHub profile is required for authentication." });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = name ? name.trim() : cleanEmail.split("@")[0];
-    const cleanId = `${provider || "google"}_${cleanEmail.replace(/[^a-zA-Z0-9]/g, "_")}`;
+    const cleanName = name ? name.trim() : (cleanEmail ? cleanEmail.split("@")[0] : "User");
+    const cleanId = `${provider || "google"}_${cleanEmail ? cleanEmail.replace(/[^a-zA-Z0-9]/g, "_") : (cleanGithub ? cleanGithub.replace(/[^a-zA-Z0-9]/g, "_") : uid || "user")}`;
 
-    // Step 1: Does Firestore contain this user?
+    // Step 1: Does Firestore contain this user? Search by ID, Email, or GitHub account
     let existingUser = await getUserProfile(cleanId);
-    if (!existingUser) {
+    if (!existingUser && cleanEmail) {
       existingUser = await getUserProfileByEmail(cleanEmail);
+    }
+    if (!existingUser && cleanGithub) {
+      existingUser = await getUserProfileByGithub(cleanGithub);
     }
 
     // Check if user is blocked
@@ -238,10 +243,12 @@ const handleUnifiedOAuth = async (req: express.Request, res: express.Response) =
 
     // Step 2: If user does not exist or was deleted -> Create profile in Firestore
     if (!existingUser || existingUser.status === 2) {
+      const defaultGithub = cleanGithub || (provider === "github" ? `https://github.com/${cleanName.toLowerCase().replace(/\s+/g, "")}` : "");
       const newUser = {
         id: cleanId,
         provider: provider || "google",
         email: cleanEmail,
+        github: defaultGithub,
         name: cleanName,
         avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanId}`,
         createdAt: new Date().toISOString(),
@@ -260,9 +267,22 @@ const handleUnifiedOAuth = async (req: express.Request, res: express.Response) =
       return res.json({ success: true, user: newUser, isNewUser: true });
     }
 
-    // Step 3: User exists -> Login complete
+    // Step 3: User exists -> Interlink email/github OAuth identity details if provided
+    let profileNeedsSave = false;
+    if (cleanEmail && (!existingUser.email || existingUser.email !== cleanEmail)) {
+      existingUser.email = cleanEmail;
+      profileNeedsSave = true;
+    }
+    if (cleanGithub && (!existingUser.github || existingUser.github !== cleanGithub)) {
+      existingUser.github = cleanGithub;
+      profileNeedsSave = true;
+    }
+    if (profileNeedsSave) {
+      await saveUserProfile(existingUser.id, existingUser);
+    }
+
     // Ensure dashboard data is seeded/available
-    await fetchUserDashboardData(cleanId);
+    await fetchUserDashboardData(existingUser.id);
 
     return res.json({ success: true, user: existingUser, isNewUser: false });
   } catch (error: any) {
@@ -735,6 +755,30 @@ app.post("/api/settings", async (req, res) => {
     const userId = req.headers["x-user-id"] as string;
     const settings = req.body;
     await saveUserSettings(userId, settings);
+
+    // Sync profile document in Firestore with email, github, and full name
+    if (userId) {
+      const userProfile = await getUserProfile(userId);
+      if (userProfile) {
+        let updated = false;
+        if (settings.email && settings.email !== userProfile.email) {
+          userProfile.email = settings.email.trim().toLowerCase();
+          updated = true;
+        }
+        if (settings.github !== undefined && settings.github !== userProfile.github) {
+          userProfile.github = settings.github.trim();
+          updated = true;
+        }
+        if (settings.firstName || settings.lastName) {
+          userProfile.name = `${settings.firstName || ''} ${settings.lastName || ''}`.trim();
+          updated = true;
+        }
+        if (updated) {
+          await saveUserProfile(userId, userProfile);
+        }
+      }
+    }
+
     res.json({ success: true });
   } catch (error: any) {
     console.error("Save settings error:", error);

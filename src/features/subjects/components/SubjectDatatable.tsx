@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Subject } from "@/types";
 import { IconPlus as Plus, IconEdit as Edit2, IconTrash as Trash, IconBook as BookOpen, IconGlobe as Globe, IconChevronRight as ChevronRight, IconChevronDown as ChevronDown, IconExternalLink as ExternalLink, IconDotsVerticalFilled as MoreVertical } from '@tabler/icons-react';
-import { Tooltip, DataTable } from "@components/ui";
+import { Tooltip, DataTable, ActionMenuPortal } from "@components/ui";
 import { Modal } from "@utils/index";
 import { ColumnDef } from "@tanstack/react-table";
 import { parseResource, ParsedLink } from "../utils/resourceUtils";
@@ -39,9 +39,6 @@ export function SubjectDatatable({
   activeDashboardId,
   onSuccess,
 }: SubjectDatatableProps) {
-  // State for actions dropdown
-  const [openActionSubId, setOpenActionSubId] = useState<string | null>(null);
-
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -169,68 +166,28 @@ export function SubjectDatatable({
       size: 100,
       cell: ({ row }) => {
         const sub = row.original;
-        const isOpen = openActionSubId === sub.id;
-        const isNearBottom = row.index >= subjects.length - 2 || subjects.length <= 4;
         return (
           <div className="flex items-center justify-center">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenActionSubId(isOpen ? null : sub.id);
-                }}
-                className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-200 cursor-pointer flex items-center justify-center"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-
-              {isOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setOpenActionSubId(null)} />
-                  <div className={`absolute right-0 w-36 bg-white border border-slate-200 shadow-2xl rounded-xl py-1.5 z-50 text-left font-sans text-xs ${
-                    isNearBottom ? "bottom-full mb-1.5" : "top-full mt-1.5"
-                  }`}>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenActionSubId(null);
-                        setViewDetailsSubject(sub);
-                      }}
-                      className="w-full px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 font-bold font-mono text-[10px] uppercase cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-indigo-500" />
-                      More Details
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenActionSubId(null);
-                        openEditModal(sub);
-                      }}
-                      className="w-full px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 font-bold font-mono text-[10px] uppercase cursor-pointer"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-amber-500" />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenActionSubId(null);
-                        openDeleteModal(sub);
-                      }}
-                      className="w-full px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 font-bold font-mono text-[10px] uppercase cursor-pointer"
-                    >
-                      <Trash className="w-3.5 h-3.5 text-rose-500" />
-                      Delete
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <ActionMenuPortal
+              items={[
+                {
+                  label: "More Details",
+                  icon: <Plus className="w-3.5 h-3.5 text-indigo-500" />,
+                  onClick: () => setViewDetailsSubject(sub),
+                },
+                {
+                  label: "Edit",
+                  icon: <Edit2 className="w-3.5 h-3.5 text-amber-500" />,
+                  onClick: () => openEditModal(sub),
+                },
+                {
+                  label: "Delete",
+                  icon: <Trash className="w-3.5 h-3.5 text-rose-500" />,
+                  onClick: () => openDeleteModal(sub),
+                  danger: true,
+                },
+              ]}
+            />
           </div>
         );
       },

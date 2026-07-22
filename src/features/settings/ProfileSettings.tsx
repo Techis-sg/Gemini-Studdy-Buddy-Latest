@@ -29,12 +29,14 @@ export function ProfileSettings({
   const userFirstName = user?.firstName || names[0] || "";
   const userLastName = user?.lastName || (names.length > 1 ? names.slice(1).join(" ") : "");
 
+  const isGithubSignup = user?.provider === "github";
+
   // Form states with customizable typography and branding values
   const [formData, setFormData] = useState({
     firstName: userFirstName,
     lastName: userLastName,
     email: user?.email || "",
-    mobile: "",
+    github: user?.github || (isGithubSignup ? `https://github.com/${user?.name?.toLowerCase().replace(/\s+/g, "") || "user"}` : ""),
     addressLine1: "",
     addressLine2: "",
     bio: "",
@@ -55,7 +57,8 @@ export function ProfileSettings({
   const [errors, setErrors] = useState({
     firstName: "",
     lastName: "",
-    mobile: "",
+    email: "",
+    github: "",
     addressLine1: "",
     addressLine2: "",
     bio: "",
@@ -132,6 +135,7 @@ export function ProfileSettings({
               firstName: data.settings.firstName || userFirstName || prev.firstName,
               lastName: data.settings.lastName || userLastName || prev.lastName,
               email: data.settings.email || user?.email || prev.email,
+              github: data.settings.github || user?.github || (isGithubSignup ? `https://github.com/${user?.name?.toLowerCase().replace(/\s+/g, "") || "user"}` : prev.github),
               hiddenMenus: data.settings.hiddenMenus || [],
             }));
             if (data.settings.twoFactorEnabled !== undefined) {
@@ -144,6 +148,7 @@ export function ProfileSettings({
               firstName: userFirstName,
               lastName: userLastName,
               email: user?.email || "",
+              github: user?.github || (isGithubSignup ? `https://github.com/${user?.name?.toLowerCase().replace(/\s+/g, "") || "user"}` : ""),
             }));
           }
         }
@@ -190,14 +195,20 @@ export function ProfileSettings({
       } else if (value.length > APP_CONFIG.VALIDATION.LAST_NAME_MAX) {
         errorMsg = `Max ${APP_CONFIG.VALIDATION.LAST_NAME_MAX} characters allowed`;
       }
-    } else if (name === "mobile") {
-      // Keep only digits and max MOBILE_DIGITS
-      value = value.replace(/\D/g, "").substring(0, APP_CONFIG.VALIDATION.MOBILE_DIGITS);
-      if (value.length > 0) {
-        if (value.length < APP_CONFIG.VALIDATION.MOBILE_DIGITS) {
-          errorMsg = `Mobile number must be exactly ${APP_CONFIG.VALIDATION.MOBILE_DIGITS} digits`;
-        } else if (!/^[6-9]/.test(value)) {
-          errorMsg = "Mobile number must start with 6, 7, 8, or 9";
+    } else if (name === "github") {
+      if (typeof value === "string" && value.trim()) {
+        const trimmed = value.trim();
+        const fullUrlPattern = /^https?:\/\/(www\.)?github\.com\/[A-Za-z0-9_.-]+\/?$/i;
+        const validUserPattern = /^([A-Za-z0-9_.-]+)$/i;
+        if (!fullUrlPattern.test(trimmed) && !validUserPattern.test(trimmed) && !trimmed.startsWith("github.com/")) {
+          errorMsg = "Must be a valid GitHub profile URL (e.g. https://github.com/username)";
+        }
+      }
+    } else if (name === "email") {
+      if (typeof value === "string" && value.trim()) {
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(value.trim())) {
+          errorMsg = "Must be a valid email address";
         }
       }
     } else if (name === "addressLine1" || name === "addressLine2" || name === "bio") {
@@ -220,15 +231,27 @@ export function ProfileSettings({
       return;
     }
 
-    if (errors.firstName || errors.lastName || errors.mobile) {
+    if (errors.firstName || errors.lastName || errors.email || errors.github) {
       toast.error("Please resolve validation errors before saving.");
       return;
+    }
+
+    let finalGithub = (formData.github || "").trim();
+    if (finalGithub) {
+      if (!finalGithub.startsWith("http://") && !finalGithub.startsWith("https://")) {
+        if (finalGithub.startsWith("github.com/")) {
+          finalGithub = "https://" + finalGithub;
+        } else {
+          finalGithub = "https://github.com/" + finalGithub.replace(/^@/, "");
+        }
+      }
     }
 
     setSaving(true);
     try {
       const combinedPayload = {
         ...formData,
+        github: finalGithub,
         twoFactorEnabled,
       };
 
@@ -626,41 +649,54 @@ export function ProfileSettings({
 
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">
-                  Email Address
+                  Email Address {!isGithubSignup && <span className="text-slate-400 font-normal lowercase">(disabled — initial signup method)</span>}
                 </label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
-                  disabled
-                  className="w-full text-xs font-bold px-3 py-2 border border-slate-100 rounded-xl bg-slate-100 text-slate-400 cursor-not-allowed"
+                  onChange={handleChange}
+                  disabled={!isGithubSignup}
+                  placeholder="you@example.com"
+                  className={`w-full text-xs font-bold px-3 py-2 border rounded-xl transition-all ${
+                    !isGithubSignup
+                      ? "border-slate-100 bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : errors.email
+                        ? "border-rose-400 bg-slate-50/50 text-slate-800 focus:border-rose-500 focus:ring-rose-500/10"
+                        : "border-slate-200 bg-slate-50/50 text-slate-800 hover:border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/10 focus:bg-white focus:outline-none"
+                  }`}
                 />
+                {errors.email && (
+                  <p className="text-rose-500 text-[10px] font-bold font-mono mt-1 uppercase tracking-wide">
+                    ⚠️ {errors.email}
+                  </p>
+                )}
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                    Mobile Number
+                    GitHub Account Profile URL {isGithubSignup && <span className="text-slate-400 font-normal lowercase">(disabled — initial signup method)</span>}
                   </label>
-                  <span className="text-[9px] font-mono font-bold text-slate-400">
-                    {formData.mobile.length}/10 DIGITS
-                  </span>
                 </div>
                 <input
                   type="text"
-                  name="mobile"
-                  value={formData.mobile}
+                  name="github"
+                  value={formData.github}
                   onChange={handleChange}
-                  placeholder="10-digit number (e.g. 9876543210)"
-                  className={`w-full text-xs font-bold px-3 py-2 border rounded-xl bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${
-                    errors.mobile
-                      ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/10"
-                      : "border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/10"
+                  disabled={isGithubSignup}
+                  placeholder="https://github.com/username"
+                  className={`w-full text-xs font-bold px-3 py-2 border rounded-xl transition-all ${
+                    isGithubSignup
+                      ? "border-slate-100 bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : errors.github
+                        ? "border-rose-400 bg-slate-50/50 text-slate-800 focus:border-rose-500 focus:ring-rose-500/10"
+                        : "border-slate-200 bg-slate-50/50 text-slate-800 hover:border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/10 focus:bg-white focus:outline-none"
                   }`}
                 />
-                {errors.mobile && (
+                {errors.github && (
                   <p className="text-rose-500 text-[10px] font-bold font-mono mt-1 uppercase tracking-wide">
-                    ⚠️ {errors.mobile}
+                    ⚠️ {errors.github}
                   </p>
                 )}
               </div>
@@ -1034,7 +1070,7 @@ export function ProfileSettings({
               <div>
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Authentication Provider Status</h4>
                 <p className="text-[11px] text-slate-500 mt-1 leading-relaxed font-mono">
-                  Your Study Buddy account is authenticated via Google OAuth. Session management and password credentials are delegated to your Google identity provider.
+                  Your Study Buddy account is authenticated via interlinked Google & GitHub OAuth identity providers. Password credentials and session management are securely delegated to your identity provider.
                 </p>
               </div>
             </div>

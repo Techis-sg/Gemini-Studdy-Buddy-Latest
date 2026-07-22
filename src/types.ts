@@ -82,7 +82,7 @@ export interface UserSettings {
   firstName: string;
   lastName: string;
   email: string;
-  mobile: string;
+  github: string;
   addressLine1: string;
   addressLine2: string;
   bio: string;

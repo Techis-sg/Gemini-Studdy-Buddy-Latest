@@ -6,3 +6,4 @@ export * from "./Breadcrumbs";
 export * from "./Tooltip";
 export * from "./Select";
 export * from "./DataTable";
+export * from "./ActionMenuPortal";

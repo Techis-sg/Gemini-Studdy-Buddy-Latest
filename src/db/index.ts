@@ -422,6 +422,37 @@ export async function getUserProfileByEmail(email: string): Promise<any> {
 }
 
 /**
+ * Get user profile by github URL or username
+ */
+export async function getUserProfileByGithub(githubUrlOrUsername: string): Promise<any> {
+  if (!githubUrlOrUsername) return null;
+  const cleanGithub = githubUrlOrUsername.trim().toLowerCase();
+  
+  const match = cleanGithub.match(/github\.com\/([^\/]+)/);
+  const username = match ? match[1] : cleanGithub.replace(/^https?:\/\//, "").replace(/\//g, "");
+
+  try {
+    const col = collection(db, "users");
+    const snap = await getDocs(col);
+    if (!snap.empty) {
+      for (const docSnap of snap.docs) {
+        const u = docSnap.data();
+        if (u.github) {
+          const uGithub = u.github.trim().toLowerCase();
+          if (uGithub === cleanGithub || uGithub.includes(username)) {
+            return u;
+          }
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    console.warn("Querying user profile by github failed:", error);
+    return null;
+  }
+}
+
+/**
  * Create or save a dashboard
  */
 export async function saveUserDashboard(userId: string | undefined, dashboard: Dashboard): Promise<void> {

@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { Task, Subject } from "@/types";
 import { getPriorityColor, getCategoryBg, getStatusColor, formatDate, getFormattedTaskId, getSubjectName } from "@utils/index";
-import { DataTable } from "@components/ui";
+import { DataTable, ActionMenuPortal } from "@components/ui";
 import { ColumnDef } from "@tanstack/react-table";
-import { IconEye as Eye, IconClock as Clock, IconEdit as Edit2, IconTrash as Trash, IconDotsVerticalFilled as MoreVertical } from "@tabler/icons-react";
+import { IconEye as Eye, IconClock as Clock, IconEdit as Edit2, IconTrash as Trash } from "@tabler/icons-react";
 
 interface TasksListViewProps {
   tasks: Task[];
@@ -30,8 +30,6 @@ export default function TasksListView({
   onOpenEditTask,
   onViewDetails,
 }: TasksListViewProps) {
-  const [openActionTaskId, setOpenActionTaskId] = useState<string | null>(null);
-
   const columns = useMemo<ColumnDef<Task>[]>(() => [
     {
       id: "select",
@@ -219,80 +217,33 @@ export default function TasksListView({
       size: 100,
       cell: ({ row }) => {
         const task = row.original;
-        const isOpen = openActionTaskId === task.id;
-        const isNearBottom = row.index >= tasks.length - 2 || tasks.length <= 4;
         return (
           <div className="flex items-center justify-center">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenActionTaskId(isOpen ? null : task.id);
-                }}
-                className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-200 cursor-pointer flex items-center justify-center"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
-
-              {isOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setOpenActionTaskId(null)} />
-                  <div className={`absolute right-0 w-36 bg-white border border-slate-200 shadow-2xl rounded-xl py-1.5 z-50 text-left font-sans text-xs ${
-                    isNearBottom ? "bottom-full mb-1.5" : "top-full mt-1.5"
-                  }`}>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenActionTaskId(null);
-                        onViewDetails(task);
-                      }}
-                      className="w-full px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 font-bold font-mono text-[10px] uppercase cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-indigo-500" />
-                      View Details
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenActionTaskId(null);
-                        onOpenTimeTracker(task);
-                      }}
-                      className="w-full px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 font-bold font-mono text-[10px] uppercase cursor-pointer"
-                    >
-                      <Clock className="w-3.5 h-3.5 text-indigo-500" />
-                      Log Time
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenActionTaskId(null);
-                        onOpenEditTask(task);
-                      }}
-                      className="w-full px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2 font-bold font-mono text-[10px] uppercase cursor-pointer"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-amber-500" />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenActionTaskId(null);
-                        onDeleteTask(task.id);
-                      }}
-                      className="w-full px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 font-bold font-mono text-[10px] uppercase cursor-pointer"
-                    >
-                      <Trash className="w-3.5 h-3.5 text-rose-500" />
-                      Delete
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <ActionMenuPortal
+              items={[
+                {
+                  label: "View Details",
+                  icon: <Eye className="w-3.5 h-3.5 text-indigo-500" />,
+                  onClick: () => onViewDetails(task),
+                },
+                {
+                  label: "Log Time",
+                  icon: <Clock className="w-3.5 h-3.5 text-indigo-500" />,
+                  onClick: () => onOpenTimeTracker(task),
+                },
+                {
+                  label: "Edit",
+                  icon: <Edit2 className="w-3.5 h-3.5 text-amber-500" />,
+                  onClick: () => onOpenEditTask(task),
+                },
+                {
+                  label: "Delete",
+                  icon: <Trash className="w-3.5 h-3.5 text-rose-500" />,
+                  onClick: () => onDeleteTask(task.id),
+                  danger: true,
+                },
+              ]}
+            />
           </div>
         );
       },
@@ -300,7 +251,6 @@ export default function TasksListView({
   ], [
     tasks.length,
     subjects,
-    openActionTaskId,
     onUpdateTask,
     onOpenTimeTracker,
     onOpenEditTask,

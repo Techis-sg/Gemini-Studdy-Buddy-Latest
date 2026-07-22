@@ -303,14 +303,12 @@ export default function KanbanBoard({
 
                       {/* Action buttons (always clean and accessible) */}
                       <div className="flex gap-2 justify-between items-center pt-2.5 border-t border-slate-50 mt-1">
-                        <Tooltip content="Log active study sessions" position="top">
-                          <button
-                            onClick={() => onOpenTimeTracker(task)}
-                            className="text-[10px] text-indigo-600 hover:text-indigo-800 font-mono font-bold px-2 py-1 rounded bg-indigo-50/60 hover:bg-indigo-100/60 transition-all cursor-pointer"
-                          >
-                            +Log Session
-                          </button>
-                        </Tooltip>
+                        <button
+                          onClick={() => onOpenTimeTracker(task)}
+                          className="text-[10px] text-indigo-600 hover:text-indigo-800 font-mono font-bold px-2 py-1 rounded bg-indigo-50/60 hover:bg-indigo-100/60 transition-all cursor-pointer"
+                        >
+                          +Log Time
+                        </button>
 
                         <div className="flex items-center gap-1.5">
                           <Tooltip content="Edit Task" position="top">
