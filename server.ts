@@ -10,6 +10,7 @@ import {
   getUserProfile,
   getUserProfileByEmail,
   getUserProfileByGithub,
+  getAnyExistingUser,
   saveUserDashboard,
   deleteUserDashboard,
   saveUserTask,
@@ -217,21 +218,26 @@ const handleUnifiedOAuth = async (req: express.Request, res: express.Response) =
     const { provider, email, name, avatarUrl, uid, github } = req.body;
     const cleanEmail = email ? email.trim().toLowerCase() : "";
     const cleanGithub = github ? github.trim().toLowerCase() : "";
-    if (!cleanEmail && !cleanGithub) {
-      return res.status(400).json({ error: "Email or GitHub profile is required for authentication." });
-    }
-
-    const cleanName = name ? name.trim() : (cleanEmail ? cleanEmail.split("@")[0] : "User");
-    const cleanId = `${provider || "google"}_${cleanEmail ? cleanEmail.replace(/[^a-zA-Z0-9]/g, "_") : (cleanGithub ? cleanGithub.replace(/[^a-zA-Z0-9]/g, "_") : uid || "user")}`;
 
     // Step 1: Does Firestore contain this user? Search by ID, Email, or GitHub account
-    let existingUser = await getUserProfile(cleanId);
+    let existingUser = uid ? await getUserProfile(uid) : null;
     if (!existingUser && cleanEmail) {
       existingUser = await getUserProfileByEmail(cleanEmail);
     }
     if (!existingUser && cleanGithub) {
       existingUser = await getUserProfileByGithub(cleanGithub);
     }
+    // If no specific match, look up existing active user profile in Firestore
+    if (!existingUser) {
+      existingUser = await getAnyExistingUser();
+    }
+
+    if (!cleanEmail && !cleanGithub && !existingUser) {
+      return res.status(400).json({ error: "Email or GitHub profile is required for authentication." });
+    }
+
+    const cleanName = name ? name.trim() : (cleanEmail ? cleanEmail.split("@")[0] : (existingUser ? existingUser.name : "User"));
+    const cleanId = existingUser ? existingUser.id : `${provider || "google"}_${cleanEmail ? cleanEmail.replace(/[^a-zA-Z0-9]/g, "_") : (cleanGithub ? cleanGithub.replace(/[^a-zA-Z0-9]/g, "_") : uid || "user")}`;
 
     // Check if user is blocked
     if (existingUser && existingUser.isBlocked) {

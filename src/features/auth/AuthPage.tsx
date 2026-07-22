@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { IconSparkles as Sparkles, IconBrandGithub as Github, IconBook as BookOpen } from '@tabler/icons-react';
 import { toast } from "react-hot-toast";
-import { auth, googleProvider, signInWithPopup } from "../../config/firebase";
+import { auth, googleProvider, githubProvider, signInWithPopup } from "../../config/firebase";
 
 interface AuthPageProps {
   onLoginSuccess: (user: any) => void;
@@ -13,6 +13,10 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
   const [showFallbackModal, setShowFallbackModal] = useState(false);
   const [fallbackEmail, setFallbackEmail] = useState("shobhitgagrani.coding33@gmail.com");
   const [fallbackName, setFallbackName] = useState("Shobhit Gagrani");
+
+  const [showGithubModal, setShowGithubModal] = useState(false);
+  const [githubInput, setGithubInput] = useState("");
+
   const [sparkles, setSparkles] = useState<Array<{ id: number; x: number; y: number; size: number; duration: number; delay: number }>>([]);
   const [imgError, setImgError] = useState(false);
 
@@ -29,21 +33,62 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
     setSparkles(newSparkles);
   }, []);
 
-  const handleOAuthSignIn = async (providerName: "google" | "github", customEmail?: string, customName?: string) => {
+  const handleOAuthSignIn = async (
+    providerName: "google" | "github",
+    customEmail?: string,
+    customName?: string,
+    customGithub?: string
+  ) => {
     setLoading(providerName);
     const toastId = toast.loading(`Authenticating with ${providerName === "google" ? "Google" : "GitHub"}...`);
 
     try {
+      const savedEmail = customEmail || localStorage.getItem("studybuddy_last_email") || undefined;
+      const savedGithub = customGithub || localStorage.getItem("studybuddy_last_github") || undefined;
+
+      // FIRST: try direct backend auto-lookup & link with existing account in Firestore
+      try {
+        const directRes = await fetch("/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: providerName,
+            email: savedEmail || "",
+            github: savedGithub || "",
+            name: customName || "",
+          }),
+        });
+
+        if (directRes.ok) {
+          const data = await directRes.json();
+          if (data.success && data.user) {
+            const loggedInUser = data.user;
+            if (loggedInUser.email) localStorage.setItem("studybuddy_last_email", loggedInUser.email);
+            if (loggedInUser.github) localStorage.setItem("studybuddy_last_github", loggedInUser.github);
+            localStorage.setItem("portal_user_id", loggedInUser.id);
+            localStorage.setItem("portal_user", JSON.stringify(loggedInUser));
+
+            if (data.isNewUser) {
+              toast.success(`Account created! Welcome to Study Buddy, ${loggedInUser.name}!`, { id: toastId });
+            } else {
+              toast.success(`Welcome back, ${loggedInUser.name}!`, { id: toastId });
+            }
+            onLoginSuccess(loggedInUser);
+            setLoading(null);
+            return;
+          }
+        }
+      } catch (directErr) {
+        console.warn("Direct OAuth lookup skipped, proceeding with Firebase popup:", directErr);
+      }
+
       let email: string | null = customEmail || null;
       let name: string | null = customName || null;
       let avatarUrl: string | undefined = undefined;
       let uid: string | null = null;
+      let githubUrl: string | undefined = customGithub || undefined;
 
       if (!email && providerName === "google") {
-        googleProvider.setCustomParameters({
-          prompt: "consent select_account",
-        });
-
         try {
           const result = await signInWithPopup(auth, googleProvider);
           const user = result.user;
@@ -61,34 +106,48 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
             return;
           }
 
-          if (
-            firebaseErr?.code === "auth/unauthorized-domain" ||
-            firebaseErr?.code === "auth/popup-blocked" ||
-            firebaseErr?.message?.includes("unauthorized-domain") ||
-            firebaseErr?.message?.includes("unauthorized domain")
-          ) {
-            toast.dismiss(toastId);
-            setShowFallbackModal(true);
-            setLoading(null);
-            return;
-          } else {
-            throw new Error(firebaseErr?.message || "Google Sign-In failed.");
-          }
+          toast.dismiss(toastId);
+          setShowFallbackModal(true);
+          setLoading(null);
+          return;
         }
       }
 
-      if (!email && providerName === "github") {
-        email = customEmail || "github_user@studybuddy.app";
-        name = customName || "GitHub Developer";
+      if (!email && !githubUrl && providerName === "github") {
+        try {
+          const result = await signInWithPopup(auth, githubProvider);
+          const user = result.user;
+          uid = user.uid;
+          email = user.email;
+          name = user.displayName;
+          avatarUrl = user.photoURL || undefined;
+          const reloadInfo = (user as any)?.reloadUserInfo;
+          const screenName = reloadInfo?.screenName || user.displayName || "";
+          if (screenName) {
+            githubUrl = `https://github.com/${screenName.replace(/^https?:\/\/(www\.)?github\.com\//i, "")}`;
+          }
+        } catch (firebaseErr: any) {
+          console.warn("GitHub Firebase popup auth result:", firebaseErr);
+
+          if (firebaseErr?.code === "auth/popup-closed-by-user") {
+            toast.dismiss(toastId);
+            toast.error("GitHub Sign-in popup was closed before completing.");
+            setLoading(null);
+            return;
+          }
+
+          toast.dismiss(toastId);
+          setShowGithubModal(true);
+          setLoading(null);
+          return;
+        }
       }
 
-      if (!email) {
-        throw new Error("Could not retrieve profile information from provider account.");
-      }
+      const cleanEmail = email ? email.trim().toLowerCase() : "";
+      const cleanGithub = githubUrl ? githubUrl.trim() : "";
 
-      const cleanEmail = email.trim().toLowerCase();
-      const cleanName = name ? name.trim() : cleanEmail.split("@")[0];
-      const formattedUid = uid || `${providerName}_${cleanEmail.replace(/[^a-zA-Z0-9]/g, "_")}`;
+      const cleanName = name ? name.trim() : (cleanEmail ? cleanEmail.split("@")[0] : "GitHub User");
+      const formattedUid = uid || `${providerName}_${(cleanEmail || cleanGithub).replace(/[^a-zA-Z0-9]/g, "_")}`;
 
       const res = await fetch("/api/auth/google", {
         method: "POST",
@@ -97,6 +156,7 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
           provider: providerName,
           uid: formattedUid,
           email: cleanEmail,
+          github: cleanGithub,
           name: cleanName,
           avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formattedUid}`,
         }),
@@ -110,8 +170,11 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
 
       const loggedInUser = data.user;
 
+      if (loggedInUser.email) localStorage.setItem("studybuddy_last_email", loggedInUser.email);
+      if (loggedInUser.github) localStorage.setItem("studybuddy_last_github", loggedInUser.github);
+
       if (data.isNewUser) {
-        toast.success(`Account created! Welcome to Studdy Buddy, ${loggedInUser.name}!`, { id: toastId });
+        toast.success(`Account created! Welcome to Study Buddy, ${loggedInUser.name}!`, { id: toastId });
       } else {
         if (loggedInUser.status === 0) {
           toast("Welcome back! Your account is currently deactivated. Access settings to reactivate.", { id: toastId, icon: "🔒" });
@@ -138,6 +201,30 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
       return;
     }
     handleOAuthSignIn("google", fallbackEmail.trim(), fallbackName.trim());
+  };
+
+  const handleGithubSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!githubInput.trim()) {
+      toast.error("Please enter your GitHub profile URL, username, or registered email.");
+      return;
+    }
+    const rawInput = githubInput.trim();
+    let userEmail = "";
+    let userGithub = "";
+
+    if (rawInput.includes("@")) {
+      userEmail = rawInput;
+    } else {
+      userGithub = rawInput.startsWith("http://") || rawInput.startsWith("https://")
+        ? rawInput
+        : rawInput.startsWith("github.com/")
+        ? `https://${rawInput}`
+        : `https://github.com/${rawInput.replace(/^@/, "")}`;
+    }
+
+    setShowGithubModal(false);
+    handleOAuthSignIn("github", userEmail || undefined, undefined, userGithub || undefined);
   };
 
   return (
@@ -325,6 +412,63 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
                   className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {loading !== null ? "Processing..." : "Continue"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Fallback GitHub Linkage Modal */}
+      {showGithubModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#1c1f26] border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-100"
+          >
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
+              <div className="p-2 rounded-xl bg-slate-800 text-white">
+                <Github className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-100 text-base">GitHub Account Verification</h3>
+                <p className="text-xs text-slate-400">Provide your GitHub profile URL, username, or registered email</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleGithubSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-slate-400 mb-1">
+                  GitHub Profile URL, Username, or Email
+                </label>
+                <input
+                  type="text"
+                  value={githubInput}
+                  onChange={(e) => setGithubInput(e.target.value)}
+                  placeholder="e.g. https://github.com/shobhitgagrani or shobhitgagrani"
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
+                />
+                <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed font-mono">
+                  This connects directly to your existing Study Buddy account profile and syllabus data.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowGithubModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading !== null}
+                  className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-white text-slate-900 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {loading !== null ? "Authenticating..." : "Link & Sign In"}
                 </button>
               </div>
             </form>

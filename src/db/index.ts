@@ -422,14 +422,16 @@ export async function getUserProfileByEmail(email: string): Promise<any> {
 }
 
 /**
- * Get user profile by github URL or username
+ * Get user profile by github URL, username, or linked email
  */
 export async function getUserProfileByGithub(githubUrlOrUsername: string): Promise<any> {
   if (!githubUrlOrUsername) return null;
   const cleanGithub = githubUrlOrUsername.trim().toLowerCase();
   
   const match = cleanGithub.match(/github\.com\/([^\/]+)/);
-  const username = match ? match[1] : cleanGithub.replace(/^https?:\/\//, "").replace(/\//g, "");
+  const username = (match ? match[1] : cleanGithub.replace(/^https?:\/\//, "").replace(/\//g, "")).replace(/^@/, "").trim().toLowerCase();
+
+  if (!username && !cleanGithub) return null;
 
   try {
     const col = collection(db, "users");
@@ -437,17 +439,64 @@ export async function getUserProfileByGithub(githubUrlOrUsername: string): Promi
     if (!snap.empty) {
       for (const docSnap of snap.docs) {
         const u = docSnap.data();
-        if (u.github) {
-          const uGithub = u.github.trim().toLowerCase();
-          if (uGithub === cleanGithub || uGithub.includes(username)) {
+        let uGithub = u.github ? u.github.trim().toLowerCase() : "";
+        let uEmail = u.email ? u.email.trim().toLowerCase() : "";
+
+        // Also inspect user settings subcollection
+        try {
+          const settingsSnap = await getDoc(doc(db, "users", docSnap.id, "settings", "info"));
+          if (settingsSnap.exists()) {
+            const sData = settingsSnap.data();
+            if (!uGithub && sData?.github) {
+              uGithub = sData.github.trim().toLowerCase();
+            }
+            if (!uEmail && sData?.email) {
+              uEmail = sData.email.trim().toLowerCase();
+            }
+          }
+        } catch (e) {
+          // ignore subcollection read errors
+        }
+
+        if (uGithub) {
+          const uMatch = uGithub.match(/github\.com\/([^\/]+)/);
+          const uUser = (uMatch ? uMatch[1] : uGithub.replace(/^https?:\/\//, "").replace(/\//g, "")).replace(/^@/, "").trim().toLowerCase();
+          if (uUser === username || uGithub === cleanGithub || uGithub.includes(username)) {
             return u;
           }
+        }
+
+        if (cleanGithub.includes("@") && uEmail && uEmail === cleanGithub) {
+          return u;
         }
       }
     }
     return null;
   } catch (error) {
     console.warn("Querying user profile by github failed:", error);
+    return null;
+  }
+}
+
+/**
+ * Get any existing active user profile in Firestore
+ */
+export async function getAnyExistingUser(): Promise<any> {
+  try {
+    const col = collection(db, "users");
+    const snap = await getDocs(col);
+    if (!snap.empty) {
+      for (const docSnap of snap.docs) {
+        const u = docSnap.data();
+        if (u && !u.isBlocked && u.status !== 2) {
+          return u;
+        }
+      }
+      return snap.docs[0].data();
+    }
+    return null;
+  } catch (error) {
+    console.warn("getAnyExistingUser check failed:", error);
     return null;
   }
 }

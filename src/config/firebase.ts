@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, GithubAuthProvider, signInWithPopup } from "firebase/auth";
 import { initializeFirestore, memoryLocalCache, setLogLevel } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 
@@ -28,5 +28,9 @@ googleProvider.addScope("profile");
 googleProvider.setCustomParameters({
   prompt: "select_account",
 });
+
+export const githubProvider = new GithubAuthProvider();
+githubProvider.addScope("user:email");
+githubProvider.addScope("read:user");
 
 export { signInWithPopup };

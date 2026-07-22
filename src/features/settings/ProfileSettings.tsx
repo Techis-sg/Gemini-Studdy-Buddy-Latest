@@ -264,6 +264,9 @@ export function ProfileSettings({
 
       if (!settingsRes.ok) throw new Error("Failed to save portal settings");
 
+      if (formData.email) localStorage.setItem("studybuddy_last_email", formData.email.trim());
+      if (finalGithub) localStorage.setItem("studybuddy_last_github", finalGithub.trim());
+
       // 2. Sync profile identity name and avatar to user state
       const updatedFullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
       const profileRes = await apiFetch("/api/auth/login", {
