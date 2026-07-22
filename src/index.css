@@ -1,0 +1,290 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+@variant cosmic (&:where(.cosmic, .cosmic *));
+
+@theme {
+  --font-sans: "Fira Code", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Global Theme variables and overrides for Dark and Cosmic themes */
+html.dark {
+  color-scheme: dark;
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+html.dark body {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+html.dark aside,
+html.dark header,
+html.dark .bg-white,
+html.dark .bg-\[\#FCFDFE\],
+html.dark .bg-\[\#fafaf9\],
+html.dark .bg-\[\#FAFAFC\],
+html.dark .bg-\[\#F4F5F8\],
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/40,
+html.dark .bg-slate-50\/30,
+html.dark .bg-slate-50,
+html.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+  color: #f1f5f9;
+  border-color: #334155 !important;
+}
+
+html.dark main {
+  background-color: #0f172a !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+html.dark .text-slate-800,
+html.dark .text-slate-900,
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .text-slate-300 {
+  color: #94a3b8 !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+/* Cosmic (Retro Terminal) Theme */
+html.cosmic {
+  color-scheme: dark;
+  background-color: #022c22;
+  color: #6ee7b7;
+}
+
+html.cosmic body {
+  background-color: #022c22;
+  color: #6ee7b7;
+}
+
+html.cosmic aside,
+html.cosmic header,
+html.cosmic .bg-white,
+html.cosmic .bg-\[\#FCFDFE\],
+html.cosmic .bg-\[\#fafaf9\],
+html.cosmic .bg-\[\#FAFAFC\],
+html.cosmic .bg-\[\#F4F5F8\],
+html.cosmic .bg-slate-50\/50,
+html.cosmic .bg-slate-50\/40,
+html.cosmic .bg-slate-50\/30,
+html.cosmic .bg-slate-50,
+html.cosmic .bg-slate-100 {
+  background-color: #064e3b !important;
+  color: #a7f3d0;
+  border-color: #065f46 !important;
+}
+
+html.cosmic main {
+  background-color: #022c22 !important;
+}
+
+html.cosmic input,
+html.cosmic select,
+html.cosmic textarea {
+  background-color: #022c22 !important;
+  color: #a7f3d0 !important;
+  border-color: #065f46 !important;
+}
+
+html.cosmic input::placeholder,
+html.cosmic textarea::placeholder {
+  color: #047857 !important;
+}
+
+html.cosmic .text-slate-800,
+html.cosmic .text-slate-900,
+html.cosmic .text-slate-700,
+html.cosmic .text-slate-600 {
+  color: #a7f3d0 !important;
+}
+
+html.cosmic .text-slate-500,
+html.cosmic .text-slate-400,
+html.cosmic .text-slate-300 {
+  color: #34d399 !important;
+}
+
+html.cosmic .border-slate-100,
+html.cosmic .border-slate-200,
+html.cosmic .border-slate-300 {
+  border-color: #065f46 !important;
+}
+
+/* Custom soft-shadow styles */
+.soft-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 20px -2px rgba(120, 110, 140, 0.08), 0 2px 8px -1px rgba(0, 0, 0, 0.04);
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+html.dark .soft-card {
+  background-color: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
+html.cosmic .soft-card {
+  background-color: #0f172a;
+  border-color: rgba(56, 189, 248, 0.25);
+  box-shadow: 0 4px 20px -2px rgba(56, 189, 248, 0.15);
+}
+
+/* Dark Mode Overrides */
+html.dark aside,
+html.dark nav,
+html.dark header {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+}
+
+html.dark [class*="FCFDFE"],
+html.dark [class*="fafaf9"],
+html.dark .bg-white {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-100\/50,
+html.dark .bg-slate-100 {
+  background-color: #0f172a !important;
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+/* Cosmic Mode Overrides */
+html.cosmic aside,
+html.cosmic nav,
+html.cosmic header {
+  background-color: #090d16 !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
+}
+
+html.cosmic [class*="FCFDFE"],
+html.cosmic [class*="fafaf9"],
+html.cosmic .bg-white {
+  background-color: #0f172a !important;
+  color: #e0f2fe !important;
+}
+
+html.cosmic .bg-slate-50,
+html.cosmic .bg-slate-100\/50,
+html.cosmic .bg-slate-100 {
+  background-color: #090d16 !important;
+  color: #38bdf8 !important;
+}
+
+html.cosmic .text-slate-900,
+html.cosmic .text-slate-800,
+html.cosmic .text-slate-700 {
+  color: #e0f2fe !important;
+}
+
+html.cosmic .text-slate-600,
+html.cosmic .text-slate-500 {
+  color: #38bdf8 !important;
+}
+
+html.cosmic .border-slate-100,
+html.cosmic .border-slate-200,
+html.cosmic .border-slate-300 {
+  border-color: rgba(56, 189, 248, 0.25) !important;
+}
+
+html.dark .soft-card {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+}
+
+html.cosmic .soft-card {
+  background-color: #064e3b;
+  border: 1px solid #065f46;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* Today's Task soft blink animation */
+@keyframes today-highlight-pulse {
+  0%, 100% {
+    background-color: rgba(99, 102, 241, 0.04);
+    border-left: 4px solid #6366f1;
+  }
+  50% {
+    background-color: rgba(99, 102, 241, 0.18);
+    border-left: 4px solid #4f46e5;
+  }
+}
+
+.animate-today-blink {
+  animation: today-highlight-pulse 2.5s ease-in-out 4 forwards;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f8f6fa;
+}
+html.dark ::-webkit-scrollbar-track,
+html.cosmic ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+html.dark ::-webkit-scrollbar-thumb,
+html.cosmic ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
