@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { apiFetch } from "@services/apiService";
 import { APP_CONFIG } from "@config/app.config";
-import { toast } from "@utils/index";
 
 export type Theme = "light" | "dark" | "cosmic";
 
@@ -81,7 +80,6 @@ export function ThemeProvider({
       nextTheme = "light";
     }
     await setTheme(nextTheme);
-    toast.success(`Theme switched to ${nextTheme === "cosmic" ? "Retro Terminal" : nextTheme}!`);
   };
 
   return (

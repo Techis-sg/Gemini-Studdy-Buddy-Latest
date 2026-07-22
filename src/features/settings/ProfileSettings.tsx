@@ -765,12 +765,13 @@ export function ProfileSettings({
 
         {activeSubTab === "portal" && (
           <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+            {/* Section 1: Daily Motivation */}
+            <div className="bg-slate-50/60 p-4.5 rounded-2xl border border-slate-200/80 space-y-2">
+              <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-500" />
                 User Motivation Message (Optional)
               </h3>
-              <p className="text-[10px] text-slate-400 font-mono mb-2">
+              <p className="text-[10px] text-slate-500 font-mono">
                 Write your custom daily motivation message or study mantra. On save, this message will reflect in your Dashboard self-motivation card "My Motivation Message".
               </p>
               <input
@@ -779,127 +780,137 @@ export function ProfileSettings({
                 value={formData.userMotivation || ""}
                 onChange={handleChange}
                 placeholder="e.g. Consistency builds excellence. Keep pushing forward!"
-                className="w-full text-xs font-bold px-3.5 py-2.5 border border-slate-200 hover:border-slate-300 rounded-xl bg-slate-50/50 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all text-slate-800"
+                className="w-full text-xs font-bold px-3.5 py-2.5 border border-slate-200 hover:border-slate-300 rounded-xl bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all text-slate-800"
               />
             </div>
 
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-indigo-500" />
-                App Visual Vibe & Theme
-              </h3>
-              <Select
-                label="App Visual Vibe"
-                value={formData.theme}
-                onChange={(e) => handleChange({ name: "theme", value: e.target.value })}
-                options={[
-                  { value: "light", label: "Clean Slate (Light Theme)" },
-                  { value: "dark", label: "Cosmic Navy (Dark Theme)" },
-                  { value: "cosmic", label: "Retro Terminal Mode" },
-                ]}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Type className="w-4 h-4 text-emerald-500" />
-                Custom Typography & Fonts
-              </h3>
-              <Select
-                label="Font Family Selection"
-                value={formData.fontFamily || "Inter"}
-                onChange={(e) => handleChange({ name: "fontFamily", value: e.target.value })}
-                options={[
-                  { value: "Inter", label: "Inter (Modern Sans-Serif)" },
-                  { value: "Space Grotesk", label: "Space Grotesk (Tech & Punchy)" },
-                  { value: "Playfair Display", label: "Playfair Display (Elegant Serif)" },
-                  { value: "JetBrains Mono", label: "JetBrains Mono (Technical Mono)" },
-                ]}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Type className="w-4 h-4 text-indigo-500" />
-                Custom Font Size
-              </h3>
-              <Select
-                label="Font Size Selection"
-                value={formData.fontSize || "16px"}
-                onChange={(e) => handleChange({ name: "fontSize", value: e.target.value })}
-                options={[
-                  { value: "12px", label: "12px (Tiny)" },
-                  { value: "14px", label: "14px (Compact)" },
-                  { value: "16px", label: "16px (Default)" },
-                  { value: "18px", label: "18px (Medium)" },
-                  { value: "20px", label: "20px (Large)" },
-                ]}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-indigo-500" />
-                Custom Accent Theme Color
-              </h3>
-              <p className="text-[10px] text-slate-400 font-mono mb-3">
-                Select from our visual palette or type a custom Hex code to color-accent buttons, badges, and tabs across the portal.
-              </p>
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                {[
-                  { hex: "#6366f1", name: "Indigo" },
-                  { hex: "#10b981", name: "Emerald" },
-                  { hex: "#f43f5e", name: "Rose" },
-                  { hex: "#f59e0b", name: "Amber" },
-                  { hex: "#0ea5e9", name: "Sky" },
-                  { hex: "#0d9488", name: "Teal" },
-                  { hex: "#8b5cf6", name: "Violet" },
-                ].map((col) => (
-                  <button
-                    key={col.hex}
-                    type="button"
-                    onClick={() => handleChange({ name: "accentColor", value: col.hex })}
-                    className="w-8 h-8 rounded-full border-2 transition-all cursor-pointer transform hover:scale-110 flex items-center justify-center"
-                    style={{
-                      backgroundColor: col.hex,
-                      borderColor: formData.accentColor === col.hex ? "#000000" : "transparent",
-                      boxShadow: formData.accentColor === col.hex ? `0 0 0 2px #ffffff, 0 0 0 4px ${col.hex}` : "none",
-                    }}
-                    title={col.name}
+            {/* Section 2: Visual Style & Typography Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Visual Theme & Accent Color Card */}
+              <div className="bg-slate-50/60 p-4.5 rounded-2xl border border-slate-200/80 space-y-4">
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-indigo-500" />
+                    App Visual Vibe & Theme
+                  </h3>
+                  <Select
+                    label="App Visual Vibe"
+                    value={formData.theme}
+                    onChange={(e) => handleChange({ name: "theme", value: e.target.value })}
+                    options={[
+                      { value: "light", label: "Clean Slate (Light Theme)" },
+                      { value: "dark", label: "Cosmic Navy (Dark Theme)" },
+                      { value: "cosmic", label: "Retro Terminal Mode" },
+                    ]}
                   />
-                ))}
+                </div>
+
+                <div className="pt-3 border-t border-slate-200/60">
+                  <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-indigo-500" />
+                    Custom Accent Theme Color
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-mono mb-3">
+                    Select from our visual palette or type a custom Hex code to color-accent buttons, badges, and tabs across the portal.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {[
+                      { hex: "#6366f1", name: "Indigo" },
+                      { hex: "#10b981", name: "Emerald" },
+                      { hex: "#f43f5e", name: "Rose" },
+                      { hex: "#f59e0b", name: "Amber" },
+                      { hex: "#0ea5e9", name: "Sky" },
+                      { hex: "#0d9488", name: "Teal" },
+                      { hex: "#8b5cf6", name: "Violet" },
+                    ].map((col) => (
+                      <button
+                        key={col.hex}
+                        type="button"
+                        onClick={() => handleChange({ name: "accentColor", value: col.hex })}
+                        className="w-7 h-7 rounded-full border-2 transition-all cursor-pointer transform hover:scale-110 flex items-center justify-center"
+                        style={{
+                          backgroundColor: col.hex,
+                          borderColor: formData.accentColor === col.hex ? "#000000" : "transparent",
+                          boxShadow: formData.accentColor === col.hex ? `0 0 0 2px #ffffff, 0 0 0 4px ${col.hex}` : "none",
+                        }}
+                        title={col.name}
+                      />
+                    ))}
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">
+                      Custom Hex Code
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-slate-400 font-mono font-bold text-xs">#</span>
+                      <input
+                        type="text"
+                        value={formData.accentColor?.replace("#", "") || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val.length <= 6) {
+                            handleChange({ name: "accentColor", value: `#${val}` });
+                          }
+                        }}
+                        placeholder="6366f1"
+                        className="w-full text-xs font-bold pl-7 pr-3 py-2 border border-slate-200 hover:border-slate-300 rounded-xl bg-white font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all text-slate-800"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="max-w-xs">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">
-                  Custom Hex Code
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-slate-400 font-mono font-bold text-xs">#</span>
-                  <input
-                    type="text"
-                    value={formData.accentColor?.replace("#", "") || ""}
-                    onChange={(e) => {
-                      const val = e.target.value.trim();
-                      if (val.length <= 6) {
-                        handleChange({ name: "accentColor", value: `#${val}` });
-                      }
-                    }}
-                    placeholder="6366f1"
-                    className="w-full text-xs font-bold pl-7 pr-3 py-2 border border-slate-200 hover:border-slate-300 rounded-xl bg-slate-50/50 font-mono focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all text-slate-800"
+
+              {/* Custom Typography Card */}
+              <div className="bg-slate-50/60 p-4.5 rounded-2xl border border-slate-200/80 space-y-4">
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Type className="w-4 h-4 text-emerald-500" />
+                    Custom Typography & Fonts
+                  </h3>
+                  <Select
+                    label="Font Family Selection"
+                    value={formData.fontFamily || "Inter"}
+                    onChange={(e) => handleChange({ name: "fontFamily", value: e.target.value })}
+                    options={[
+                      { value: "Inter", label: "Inter (Modern Sans-Serif)" },
+                      { value: "Space Grotesk", label: "Space Grotesk (Tech & Punchy)" },
+                      { value: "Playfair Display", label: "Playfair Display (Elegant Serif)" },
+                      { value: "JetBrains Mono", label: "JetBrains Mono (Technical Mono)" },
+                    ]}
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-slate-200/60">
+                  <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Type className="w-4 h-4 text-indigo-500" />
+                    Custom Font Size
+                  </h3>
+                  <Select
+                    label="Font Size Selection"
+                    value={formData.fontSize || "16px"}
+                    onChange={(e) => handleChange({ name: "fontSize", value: e.target.value })}
+                    options={[
+                      { value: "12px", label: "12px (Tiny)" },
+                      { value: "14px", label: "14px (Compact)" },
+                      { value: "16px", label: "16px (Default)" },
+                      { value: "18px", label: "18px (Medium)" },
+                      { value: "20px", label: "20px (Large)" },
+                    ]}
                   />
                 </div>
               </div>
             </div>
 
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+            {/* Section 3: Sidebar Navigation Toggles */}
+            <div className="bg-slate-50/60 p-4.5 rounded-2xl border border-slate-200/80 space-y-3">
+              <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-purple-500" />
                 Sidebar Navigation Menu Toggles
               </h3>
-              <p className="text-[10px] text-slate-400 font-mono mb-3">
+              <p className="text-[10px] text-slate-500 font-mono">
                 Toggle active views to hide or show secondary pages in your left rail sidebar. Settings is always visible.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {[
                   { id: "tasks", name: "Tasks Table" },
                   { id: "subjects", name: "Subjects Catalog" },
@@ -909,69 +920,77 @@ export function ProfileSettings({
                   { id: "history", name: "Activity Logs" },
                 ].map((menu) => {
                   const isHidden = (formData.hiddenMenus || []).includes(menu.id);
+                  const isEnabled = !isHidden;
                   return (
                     <div
                       key={menu.id}
-                      className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100"
+                      className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200/80 hover:border-slate-300 transition-all shadow-2xs"
                     >
-                      <input
-                        type="checkbox"
-                        id={`toggle-menu-${menu.id}`}
-                        checked={!isHidden}
-                        onChange={(e) => {
-                          const currentlyHidden = formData.hiddenMenus || [];
-                          let newHidden: string[];
-                          if (e.target.checked) {
-                            newHidden = currentlyHidden.filter((id) => id !== menu.id);
-                          } else {
-                            newHidden = [...currentlyHidden, menu.id];
-                          }
-                          handleChange({ name: "hiddenMenus", value: newHidden });
-                        }}
-                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
-                      />
                       <label
                         htmlFor={`toggle-menu-${menu.id}`}
-                        className="text-xs font-bold text-slate-600 cursor-pointer select-none"
+                        className="text-xs font-bold text-slate-700 cursor-pointer select-none"
                       >
                         {menu.name}
                       </label>
+                      <div className="flex flex-col items-center shrink-0 pl-3">
+                        <input
+                          type="checkbox"
+                          id={`toggle-menu-${menu.id}`}
+                          checked={isEnabled}
+                          onChange={(e) => {
+                            const currentlyHidden = formData.hiddenMenus || [];
+                            let newHidden: string[];
+                            if (e.target.checked) {
+                              newHidden = currentlyHidden.filter((id) => id !== menu.id);
+                            } else {
+                              newHidden = [...currentlyHidden, menu.id];
+                            }
+                            handleChange({ name: "hiddenMenus", value: newHidden });
+                          }}
+                          className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
+                        />
+                        <span className={`text-[10px] font-light font-mono uppercase tracking-wider mt-0.5 ${isEnabled ? "text-emerald-600 font-normal" : "text-rose-500 font-normal"}`}>
+                          {isEnabled ? "ON" : "OFF"}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                <Database className="w-4 h-4 text-amber-500" />
-                Custom CSS Requirements Override
-              </h3>
-              <p className="text-[10px] text-slate-400 font-mono mb-2">
-                Inject custom visual CSS styling directly into the workspace DOM to customize page headers, borders, margins or layout overlays.
-              </p>
-              <textarea
-                name="customCss"
-                value={formData.customCss || ""}
-                onChange={handleChange}
-                rows={4}
-                placeholder="/* e.g. .bg-white { border: 2px solid green !important; } */"
-                className="w-full text-xs font-bold p-3 border border-slate-200 hover:border-slate-300 rounded-xl bg-slate-50/50 font-mono focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all text-slate-800"
-              />
-            </div>
-
-            {/* Dashboard Management */}
-            {onDeleteDashboard && (
-              <div className="border border-rose-100 bg-rose-50/20 p-5 rounded-2xl space-y-4">
-                <div className="flex items-center gap-2">
-                  <Trash2 className="w-5 h-5 text-rose-500" />
-                  <h4 className="text-sm font-bold text-slate-800">Workspace Dashboard Deletion</h4>
-                </div>
-                <p className="text-[11px] text-slate-500 font-mono leading-relaxed">
-                  Select one of your custom study trackers below to delete it permanently. Please note that you cannot delete the default tracking dashboard.
+            {/* Section 4: Advanced Workspace Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Custom CSS Override */}
+              <div className="bg-slate-50/60 p-4.5 rounded-2xl border border-slate-200/80 space-y-2">
+                <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                  <Database className="w-4 h-4 text-amber-500" />
+                  Custom CSS Override
+                </h3>
+                <p className="text-[10px] text-slate-500 font-mono">
+                  Inject custom visual CSS styling directly into the workspace DOM to customize headers, borders, margins or layout overlays.
                 </p>
-                
-                <div className="flex items-center gap-3 max-w-md">
+                <textarea
+                  name="customCss"
+                  value={formData.customCss || ""}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="/* e.g. .bg-white { border: 2px solid green !important; } */"
+                  className="w-full text-xs font-bold p-3 border border-slate-200 hover:border-slate-300 rounded-xl bg-white font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all text-slate-800"
+                />
+              </div>
+
+              {/* Dashboard Management */}
+              {onDeleteDashboard && (
+                <div className="bg-rose-50/20 border border-rose-100 p-4.5 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-4 h-4 text-rose-500" />
+                    <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Dashboard Deletion</h4>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-mono leading-relaxed">
+                    Select one of your custom study trackers to delete it permanently. Default tracker cannot be deleted.
+                  </p>
+                  
                   <select
                     id="dashboard-delete-select"
                     className="w-full text-xs font-bold px-3 py-2 border border-slate-200 rounded-xl bg-white hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all text-slate-800"
@@ -992,8 +1011,8 @@ export function ProfileSettings({
                     ))}
                   </select>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="pt-4 border-t border-slate-100 flex justify-end">
               <button
@@ -1015,7 +1034,7 @@ export function ProfileSettings({
               <div>
                 <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Authentication Provider Status</h4>
                 <p className="text-[11px] text-slate-500 mt-1 leading-relaxed font-mono">
-                  Your Learn.Space account is authenticated via Google OAuth. Session management and password credentials are delegated to your Google identity provider.
+                  Your Study Buddy account is authenticated via Google OAuth. Session management and password credentials are delegated to your Google identity provider.
                 </p>
               </div>
             </div>
@@ -1190,16 +1209,8 @@ export function ProfileSettings({
             </h3>
 
             <div className="space-y-4">
-              <div className="flex items-start gap-3 bg-slate-50/50 p-3.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all">
-                <input
-                  type="checkbox"
-                  id="emailNotifications"
-                  name="emailNotifications"
-                  checked={formData.emailNotifications}
-                  onChange={handleChange}
-                  className="w-4 h-4 mt-0.5 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
-                />
-                <div className="space-y-0.5 cursor-pointer select-none">
+              <div className="flex items-center justify-between bg-slate-50/50 p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all">
+                <div className="space-y-0.5 cursor-pointer select-none pr-4">
                   <label htmlFor="emailNotifications" className="text-xs font-bold text-slate-700 cursor-pointer">
                     Daily Syllabus Target Reminders
                   </label>
@@ -1207,30 +1218,23 @@ export function ProfileSettings({
                     Receive email updates with your active daily targets, incomplete mock tests, and subject benchmarks.
                   </p>
                 </div>
+                <div className="flex flex-col items-center shrink-0">
+                  <input
+                    type="checkbox"
+                    id="emailNotifications"
+                    name="emailNotifications"
+                    checked={formData.emailNotifications}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
+                  />
+                  <span className={`text-[10px] font-light font-mono uppercase tracking-wider mt-0.5 ${formData.emailNotifications ? "text-emerald-600 font-normal" : "text-rose-500 font-normal"}`}>
+                    {formData.emailNotifications ? "ON" : "OFF"}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-start gap-3 bg-slate-50/50 p-3.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all">
-                <input
-                  type="checkbox"
-                  id="pushNotifications"
-                  name="pushNotifications"
-                  checked={formData.pushNotifications}
-                  onChange={(e) => {
-                    handleChange(e);
-                    if (e.target.checked && "Notification" in window) {
-                      Notification.requestPermission().then((permission) => {
-                        if (permission === "granted") {
-                          toast.success("Browser notifications enabled!");
-                          new Notification("Learn.Space Study Portal", {
-                            body: "Browser notifications active for target alerts & study logs.",
-                          });
-                        }
-                      });
-                    }
-                  }}
-                  className="w-4 h-4 mt-0.5 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
-                />
-                <div className="space-y-0.5 cursor-pointer select-none">
+              <div className="flex items-center justify-between bg-slate-50/50 p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all">
+                <div className="space-y-0.5 cursor-pointer select-none pr-4">
                   <label htmlFor="pushNotifications" className="text-xs font-bold text-slate-700 cursor-pointer">
                     Immediate Browser Notifications
                   </label>
@@ -1238,24 +1242,54 @@ export function ProfileSettings({
                     Alert you when active study session timers expire, goals are logged, or streaks are updated.
                   </p>
                 </div>
+                <div className="flex flex-col items-center shrink-0">
+                  <input
+                    type="checkbox"
+                    id="pushNotifications"
+                    name="pushNotifications"
+                    checked={formData.pushNotifications}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (e.target.checked && "Notification" in window) {
+                        Notification.requestPermission().then((permission) => {
+                          if (permission === "granted") {
+                            toast.success("Browser notifications enabled!");
+                            new Notification("Study Buddy Portal", {
+                              body: "Browser notifications active for target alerts & study logs.",
+                            });
+                          }
+                        });
+                      }
+                    }}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
+                  />
+                  <span className={`text-[10px] font-light font-mono uppercase tracking-wider mt-0.5 ${formData.pushNotifications ? "text-emerald-600 font-normal" : "text-rose-500 font-normal"}`}>
+                    {formData.pushNotifications ? "ON" : "OFF"}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-start gap-3 bg-slate-50/50 p-3.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all">
-                <input
-                  type="checkbox"
-                  id="weeklyDigests"
-                  name="weeklyDigests"
-                  checked={formData.weeklyDigests}
-                  onChange={handleChange}
-                  className="w-4 h-4 mt-0.5 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
-                />
-                <div className="space-y-0.5 cursor-pointer select-none">
+              <div className="flex items-center justify-between bg-slate-50/50 p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all">
+                <div className="space-y-0.5 cursor-pointer select-none pr-4">
                   <label htmlFor="weeklyDigests" className="text-xs font-bold text-slate-700 cursor-pointer">
                     Weekly Strategic Performance Digest
                   </label>
                   <p className="text-[10px] text-slate-500 font-mono">
                     Includes side-by-side study logs charts, progress tracking, streak summary, and syllabus forecast.
                   </p>
+                </div>
+                <div className="flex flex-col items-center shrink-0">
+                  <input
+                    type="checkbox"
+                    id="weeklyDigests"
+                    name="weeklyDigests"
+                    checked={formData.weeklyDigests}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
+                  />
+                  <span className={`text-[10px] font-light font-mono uppercase tracking-wider mt-0.5 ${formData.weeklyDigests ? "text-emerald-600 font-normal" : "text-rose-500 font-normal"}`}>
+                    {formData.weeklyDigests ? "ON" : "OFF"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1320,22 +1354,27 @@ export function ProfileSettings({
                 Visibility & Private Data Settings
               </h3>
 
-              <div className="flex items-start gap-3 bg-slate-50/50 p-3.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all">
-                <input
-                  type="checkbox"
-                  id="isPublicProfile"
-                  name="isPublicProfile"
-                  checked={formData.isPublicProfile}
-                  onChange={handlePublicProfileToggle}
-                  className="w-4 h-4 mt-0.5 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
-                />
-                <div className="space-y-0.5 cursor-pointer select-none">
+              <div className="flex items-center justify-between bg-slate-50/50 p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-all">
+                <div className="space-y-0.5 cursor-pointer select-none pr-4">
                   <label htmlFor="isPublicProfile" className="text-xs font-bold text-slate-700 cursor-pointer">
                     Public Prep Visibility
                   </label>
                   <p className="text-[10px] text-slate-500 font-mono">
                     Allows peer aspirants to search, check active streaks, view mock test performance index, and compare schedules.
                   </p>
+                </div>
+                <div className="flex flex-col items-center shrink-0">
+                  <input
+                    type="checkbox"
+                    id="isPublicProfile"
+                    name="isPublicProfile"
+                    checked={formData.isPublicProfile}
+                    onChange={handlePublicProfileToggle}
+                    className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded cursor-pointer"
+                  />
+                  <span className={`text-[10px] font-light font-mono uppercase tracking-wider mt-0.5 ${formData.isPublicProfile ? "text-emerald-600 font-normal" : "text-rose-500 font-normal"}`}>
+                    {formData.isPublicProfile ? "ON" : "OFF"}
+                  </span>
                 </div>
               </div>
             </div>
