@@ -553,12 +553,12 @@ export const NotesView: React.FC<NotesViewProps> = ({
                             {badge.text}
                           </span>
 
-                          <div className="flex items-center gap-1.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150">
+                          <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-all">
                             <Tooltip content="Edit Note" position="top">
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditReminder(rem)}
-                                className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                                className="p-1.5 bg-white/90 hover:bg-amber-100 text-slate-700 hover:text-amber-900 border border-black/10 rounded-lg shadow-2xs transition-all cursor-pointer hover:scale-105"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
@@ -567,7 +567,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleDeleteReminder(rem.id)}
-                                className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                                className="p-1.5 bg-white/90 hover:bg-rose-100 text-slate-700 hover:text-rose-700 border border-black/10 rounded-lg shadow-2xs transition-all cursor-pointer hover:scale-105"
                               >
                                 <Trash className="w-3.5 h-3.5" />
                               </button>
@@ -679,12 +679,12 @@ export const NotesView: React.FC<NotesViewProps> = ({
                             </button>
 
                             {/* Hover Edit and Delete Buttons */}
-                            <div className="flex items-center gap-1.5 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150">
+                            <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-all">
                               <Tooltip content="Edit Note" position="top">
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditStudyNote(note)}
-                                  className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                                  className="p-1.5 bg-white/90 hover:bg-amber-100 text-slate-700 hover:text-amber-900 border border-black/10 rounded-lg shadow-2xs transition-all cursor-pointer hover:scale-105"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
                                 </button>
@@ -693,7 +693,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteStudyNote(note.id)}
-                                  className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                                  className="p-1.5 bg-white/90 hover:bg-rose-100 text-slate-700 hover:text-rose-700 border border-black/10 rounded-lg shadow-2xs transition-all cursor-pointer hover:scale-105"
                                 >
                                   <Trash className="w-3.5 h-3.5" />
                                 </button>

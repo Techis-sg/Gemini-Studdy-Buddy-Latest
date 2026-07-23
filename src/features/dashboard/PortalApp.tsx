@@ -944,11 +944,12 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center gap-1 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 shrink-0">
+                                    <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-all shrink-0">
                                       <Tooltip content="Delete Reminder" position="top">
                                         <button
+                                          type="button"
                                           onClick={() => handleDeleteDashboardReminder(rem.id)}
-                                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                                          className="p-1.5 bg-white hover:bg-rose-100 text-slate-700 hover:text-rose-700 border border-slate-200 rounded-lg shadow-2xs transition-all cursor-pointer hover:scale-105"
                                         >
                                           <Trash className="w-3.5 h-3.5" />
                                         </button>
