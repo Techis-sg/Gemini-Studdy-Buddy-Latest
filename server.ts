@@ -10,7 +10,6 @@ import {
   getUserProfile,
   getUserProfileByEmail,
   getUserProfileByGithub,
-  getAnyExistingUser,
   saveUserDashboard,
   deleteUserDashboard,
   saveUserTask,
@@ -227,17 +226,15 @@ const handleUnifiedOAuth = async (req: express.Request, res: express.Response) =
     if (!existingUser && cleanGithub) {
       existingUser = await getUserProfileByGithub(cleanGithub);
     }
-    // If no specific match, look up existing active user profile in Firestore
-    if (!existingUser) {
-      existingUser = await getAnyExistingUser();
-    }
 
     if (!cleanEmail && !cleanGithub && !existingUser) {
       return res.status(400).json({ error: "Email or GitHub profile is required for authentication." });
     }
 
     const cleanName = name ? name.trim() : (cleanEmail ? cleanEmail.split("@")[0] : (existingUser ? existingUser.name : "User"));
-    const cleanId = existingUser ? existingUser.id : `${provider || "google"}_${cleanEmail ? cleanEmail.replace(/[^a-zA-Z0-9]/g, "_") : (cleanGithub ? cleanGithub.replace(/[^a-zA-Z0-9]/g, "_") : uid || "user")}`;
+    const cleanId = existingUser
+      ? existingUser.id
+      : (uid || `${provider || "google"}_${cleanEmail ? cleanEmail.replace(/[^a-zA-Z0-9]/g, "_") : (cleanGithub ? cleanGithub.replace(/[^a-zA-Z0-9]/g, "_") : "user")}`);
 
     // Check if user is blocked
     if (existingUser && existingUser.isBlocked) {
@@ -283,12 +280,52 @@ const handleUnifiedOAuth = async (req: express.Request, res: express.Response) =
       existingUser.github = cleanGithub;
       profileNeedsSave = true;
     }
+    if (avatarUrl && existingUser.avatarUrl !== avatarUrl) {
+      existingUser.avatarUrl = avatarUrl;
+      profileNeedsSave = true;
+    }
+    if (cleanName && (!existingUser.name || existingUser.name === "User" || existingUser.name === "Google User")) {
+      existingUser.name = cleanName;
+      profileNeedsSave = true;
+    }
     if (profileNeedsSave) {
       await saveUserProfile(existingUser.id, existingUser);
     }
 
     // Ensure dashboard data is seeded/available
     await fetchUserDashboardData(existingUser.id);
+
+    // Check if user has TOTP MFA enabled
+    const userSettings = await getUserSettings(existingUser.id);
+    const mfaEnabled = (existingUser.twoFactorEnabled || userSettings?.twoFactorEnabled) && (existingUser.totpSecret || userSettings?.totpSecret);
+
+    if (mfaEnabled && !req.body.mfaVerified) {
+      const totpCode = req.body.totpCode ? String(req.body.totpCode).trim().replace(/\D/g, "") : "";
+      if (!totpCode) {
+        return res.json({
+          requiresMfa: true,
+          userId: existingUser.id,
+          email: existingUser.email,
+          name: existingUser.name,
+          message: "Google Authenticator 2FA is required for this account.",
+        });
+      }
+
+      const cleanSecret = String(existingUser.totpSecret || userSettings?.totpSecret).replace(/\s+/g, "").toUpperCase();
+      const totp = new OTPAuth.TOTP({
+        issuer: "LearnSpace",
+        label: "User",
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(cleanSecret),
+      });
+
+      const delta = totp.validate({ token: totpCode, window: 2 });
+      if (delta === null) {
+        return res.status(400).json({ error: "Invalid Google Authenticator 6-digit code." });
+      }
+    }
 
     return res.json({ success: true, user: existingUser, isNewUser: false });
   } catch (error: any) {
@@ -775,6 +812,10 @@ app.post("/api/settings", async (req, res) => {
           userProfile.github = settings.github.trim();
           updated = true;
         }
+        if (settings.avatarUrl && settings.avatarUrl !== userProfile.avatarUrl) {
+          userProfile.avatarUrl = settings.avatarUrl;
+          updated = true;
+        }
         if (settings.firstName || settings.lastName) {
           userProfile.name = `${settings.firstName || ''} ${settings.lastName || ''}`.trim();
           updated = true;
@@ -832,16 +873,19 @@ app.post("/api/auth/mfa/verify", async (req, res) => {
       return res.status(400).json({ error: "Secret key and verification code are required." });
     }
 
+    const cleanSecret = String(secret).replace(/\s+/g, "").toUpperCase();
+    const cleanCode = String(code).trim().replace(/\D/g, "");
+
     const totp = new OTPAuth.TOTP({
       issuer: "LearnSpace",
       label: "User",
       algorithm: "SHA1",
       digits: 6,
       period: 30,
-      secret: OTPAuth.Secret.fromBase32(secret),
+      secret: OTPAuth.Secret.fromBase32(cleanSecret),
     });
 
-    const delta = totp.validate({ token: String(code).trim(), window: 1 });
+    const delta = totp.validate({ token: cleanCode, window: 2 });
     if (delta === null) {
       return res.status(400).json({ error: "Invalid authenticator code. Please check your Google Authenticator app and try again." });
     }
@@ -850,13 +894,13 @@ app.post("/api/auth/mfa/verify", async (req, res) => {
     const updatedSettings = {
       ...currentSettings,
       twoFactorEnabled: true,
-      totpSecret: secret,
+      totpSecret: cleanSecret,
     };
     await saveUserSettings(userId, updatedSettings);
 
     const profile = await getUserProfile(userId);
     if (profile) {
-      await saveUserProfile(userId, { ...profile, twoFactorEnabled: true, totpSecret: secret });
+      await saveUserProfile(userId, { ...profile, twoFactorEnabled: true, totpSecret: cleanSecret });
     }
 
     await addHistoryLog(userId, {
@@ -909,6 +953,8 @@ app.post("/api/auth/mfa/validate", async (req, res) => {
   try {
     const userId = req.headers["x-user-id"] as string;
     const { code } = req.body;
+    const cleanCode = String(code || "").trim().replace(/\D/g, "");
+
     const settings = await getUserSettings(userId);
     const profile = await getUserProfile(userId);
     const secret = settings?.totpSecret || profile?.totpSecret;
@@ -917,16 +963,18 @@ app.post("/api/auth/mfa/validate", async (req, res) => {
       return res.status(400).json({ error: "MFA is not enabled for this account." });
     }
 
+    const cleanSecret = String(secret).replace(/\s+/g, "").toUpperCase();
+
     const totp = new OTPAuth.TOTP({
       issuer: "LearnSpace",
       label: "User",
       algorithm: "SHA1",
       digits: 6,
       period: 30,
-      secret: OTPAuth.Secret.fromBase32(secret),
+      secret: OTPAuth.Secret.fromBase32(cleanSecret),
     });
 
-    const delta = totp.validate({ token: String(code).trim(), window: 1 });
+    const delta = totp.validate({ token: cleanCode, window: 2 });
     if (delta === null) {
       return res.status(400).json({ error: "Invalid authenticator code." });
     }
@@ -935,6 +983,57 @@ app.post("/api/auth/mfa/validate", async (req, res) => {
   } catch (error: any) {
     console.error("MFA Validate error:", error);
     res.status(500).json({ error: "Failed to validate MFA code: " + error.message });
+  }
+});
+
+app.post("/api/auth/mfa/login-verify", async (req, res) => {
+  try {
+    const { userId, code } = req.body;
+    if (!userId || !code) {
+      return res.status(400).json({ error: "User ID and 6-digit TOTP code are required." });
+    }
+
+    const cleanCode = String(code).trim().replace(/\D/g, "");
+    const profile = await getUserProfile(userId);
+    const settings = await getUserSettings(userId);
+    const secret = profile?.totpSecret || settings?.totpSecret;
+
+    if (!profile) {
+      return res.status(404).json({ error: "User profile not found." });
+    }
+
+    if (!secret) {
+      return res.json({ success: true, user: profile });
+    }
+
+    const cleanSecret = String(secret).replace(/\s+/g, "").toUpperCase();
+
+    const totp = new OTPAuth.TOTP({
+      issuer: "LearnSpace",
+      label: "User",
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(cleanSecret),
+    });
+
+    const delta = totp.validate({ token: cleanCode, window: 2 });
+    if (delta === null) {
+      return res.status(400).json({ error: "Invalid Google Authenticator code. Please check your app and try again." });
+    }
+
+    await addHistoryLog(userId, {
+      id: "log_" + Date.now(),
+      type: "action",
+      action: "mfa_login_verify",
+      description: "Successfully verified TOTP MFA code during sign-in.",
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ success: true, user: profile });
+  } catch (error: any) {
+    console.error("MFA login verify error:", error);
+    res.status(500).json({ error: "MFA verification failed: " + error.message });
   }
 });
 
@@ -1873,6 +1972,46 @@ app.post("/api/dashboard/import-files", async (req, res) => {
           resource: resourceStr,
         };
       });
+
+      if (resourcesCsvText) {
+        try {
+          const parsedResources = parseCSV(resourcesCsvText);
+          for (const subj of createdSubjects) {
+            const rawSubjId = Object.keys(subjectIdMap).find(k => subjectIdMap[k] === subj.id) || "";
+            
+            const matchedRes = parsedResources.filter((r) => {
+              const resSubjId = (getCsvField(r, "subject_id", "subjectid", "subj_id", "subject") || "").toLowerCase().trim();
+              if (!resSubjId) return false;
+              if (resSubjId === "all") return true;
+              if (rawSubjId && resSubjId === rawSubjId.toLowerCase()) return true;
+              if (subj.name && (resSubjId === subj.name.toLowerCase() || subj.name.toLowerCase().includes(resSubjId) || resSubjId.includes(subj.name.toLowerCase()))) return true;
+              return false;
+            });
+
+            if (matchedRes.length > 0) {
+              const formattedResList = matchedRes.map((r) => {
+                const rType = (getCsvField(r, "resource_type", "type", "category", "resourcetype") || "").toLowerCase();
+                const rTitle = getCsvField(r, "title", "name", "label", "resource_name") || "Resource";
+                const rUrl = getCsvField(r, "url_or_location", "url", "link", "location", "path") || "";
+
+                if (rType.includes("video") || rType.includes("youtube") || rType.includes("course") || rType.includes("playlist")) {
+                  return `video:${rTitle}|${rUrl}`;
+                } else if (rType.includes("textbook") || rType.includes("book") || rType.includes("pdf") || rType.includes("guide")) {
+                  return `textbook:${rTitle}${rUrl ? `|${rUrl}` : ""}`;
+                } else {
+                  return `link:${rTitle}|${rUrl}`;
+                }
+              });
+
+              const existingRes = subj.resource ? subj.resource.trim() : "";
+              const allResList = existingRes ? [existingRes, ...formattedResList] : formattedResList;
+              subj.resource = allResList.join(";;");
+            }
+          }
+        } catch (resErr) {
+          console.warn("Failed to parse resources.csv during import:", resErr);
+        }
+      }
 
       for (const subj of createdSubjects) {
         await saveUserSubject(userId, subj);

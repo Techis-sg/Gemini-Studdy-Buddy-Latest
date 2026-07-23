@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Task, Subject } from "@/types";
 import { getPriorityColor, getCategoryBg, getStatusColor, formatDate, getFormattedTaskId, getSubjectName } from "@utils/index";
-import { DataTable, ActionMenuPortal } from "@components/ui";
+import { DataTable, ActionMenuPortal, Tooltip } from "@components/ui";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconEye as Eye, IconClock as Clock, IconEdit as Edit2, IconTrash as Trash } from "@tabler/icons-react";
 
@@ -110,24 +110,33 @@ export default function TasksListView({
         const isCompleted = task.status === "Completed";
         return (
           <div className="space-y-1 max-w-md relative group">
-            <span
-              onClick={() => onViewDetails(task)}
-              className={`font-bold text-sm block text-slate-800 break-words whitespace-normal cursor-pointer hover:text-indigo-600 hover:underline transition-colors ${isCompleted ? "line-through text-slate-400 font-normal" : ""}`}
-            >
-              {task.title}
-              {task.notes && <span className="inline-block ml-1 text-xs cursor-help">📝</span>}
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span
+                onClick={() => onViewDetails(task)}
+                className={`font-bold text-sm block text-slate-800 break-words whitespace-normal cursor-pointer hover:text-indigo-600 hover:underline transition-colors ${isCompleted ? "line-through text-slate-400 font-normal" : ""}`}
+              >
+                {task.title}
+              </span>
+              {task.notes && (
+                <Tooltip
+                  position="top"
+                  content={
+                    <div className="max-w-xs text-left font-sans p-1">
+                      <span className="font-bold text-amber-300 block mb-1">📝 Task Notes</span>
+                      <p className="text-slate-100 text-xs leading-relaxed whitespace-pre-wrap font-normal">{task.notes}</p>
+                    </div>
+                  }
+                >
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-md cursor-help shadow-2xs transition-all">
+                    📝 Note
+                  </span>
+                </Tooltip>
+              )}
+            </div>
             {task.description && (
               <p className="text-slate-500 font-mono text-xs leading-relaxed break-words whitespace-normal">
                 {task.description}
               </p>
-            )}
-            {task.notes && (
-              <div className="hidden group-hover:block absolute left-1/2 top-[110%] mt-1 -translate-x-1/2 z-50 w-64 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-xl border border-slate-800 font-sans pointer-events-none transition-all duration-150">
-                <span className="font-bold text-amber-400 block mb-1">📝 Notes</span>
-                <p className="font-normal text-slate-200 text-[11px] leading-relaxed break-words whitespace-normal">{task.notes}</p>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-slate-900"></div>
-              </div>
             )}
             {task.attachments && task.attachments.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1.5">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { IconSparkles as Sparkles, IconBrandGithub as Github, IconBook as BookOpen } from '@tabler/icons-react';
+import { IconSparkles as Sparkles, IconBrandGithub as Github, IconBook as BookOpen, IconShieldCheck as ShieldCheck, IconLoader2 as Loader2 } from '@tabler/icons-react';
 import { toast } from "react-hot-toast";
 import { auth, googleProvider, githubProvider, signInWithPopup } from "../../config/firebase";
 
@@ -10,15 +10,13 @@ interface AuthPageProps {
 
 export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
   const [loading, setLoading] = useState<"google" | "github" | null>(null);
-  const [showFallbackModal, setShowFallbackModal] = useState(false);
-  const [fallbackEmail, setFallbackEmail] = useState("shobhitgagrani.coding33@gmail.com");
-  const [fallbackName, setFallbackName] = useState("Shobhit Gagrani");
-
-  const [showGithubModal, setShowGithubModal] = useState(false);
-  const [githubInput, setGithubInput] = useState("");
-
   const [sparkles, setSparkles] = useState<Array<{ id: number; x: number; y: number; size: number; duration: number; delay: number }>>([]);
   const [imgError, setImgError] = useState(false);
+
+  // MFA verification state
+  const [mfaPrompt, setMfaPrompt] = useState<{ userId: string; userEmail?: string; userName?: string } | null>(null);
+  const [totpCodeInput, setTotpCodeInput] = useState("");
+  const [mfaVerifying, setMfaVerifying] = useState(false);
 
   useEffect(() => {
     // Generate floating sparkles for ambient background effect
@@ -33,62 +31,18 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
     setSparkles(newSparkles);
   }, []);
 
-  const handleOAuthSignIn = async (
-    providerName: "google" | "github",
-    customEmail?: string,
-    customName?: string,
-    customGithub?: string
-  ) => {
+  const handleOAuthSignIn = async (providerName: "google" | "github") => {
     setLoading(providerName);
     const toastId = toast.loading(`Authenticating with ${providerName === "google" ? "Google" : "GitHub"}...`);
 
     try {
-      const savedEmail = customEmail || localStorage.getItem("studybuddy_last_email") || undefined;
-      const savedGithub = customGithub || localStorage.getItem("studybuddy_last_github") || undefined;
-
-      // FIRST: try direct backend auto-lookup & link with existing account in Firestore
-      try {
-        const directRes = await fetch("/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider: providerName,
-            email: savedEmail || "",
-            github: savedGithub || "",
-            name: customName || "",
-          }),
-        });
-
-        if (directRes.ok) {
-          const data = await directRes.json();
-          if (data.success && data.user) {
-            const loggedInUser = data.user;
-            if (loggedInUser.email) localStorage.setItem("studybuddy_last_email", loggedInUser.email);
-            if (loggedInUser.github) localStorage.setItem("studybuddy_last_github", loggedInUser.github);
-            localStorage.setItem("portal_user_id", loggedInUser.id);
-            localStorage.setItem("portal_user", JSON.stringify(loggedInUser));
-
-            if (data.isNewUser) {
-              toast.success(`Account created! Welcome to Study Buddy, ${loggedInUser.name}!`, { id: toastId });
-            } else {
-              toast.success(`Welcome back, ${loggedInUser.name}!`, { id: toastId });
-            }
-            onLoginSuccess(loggedInUser);
-            setLoading(null);
-            return;
-          }
-        }
-      } catch (directErr) {
-        console.warn("Direct OAuth lookup skipped, proceeding with Firebase popup:", directErr);
-      }
-
-      let email: string | null = customEmail || null;
-      let name: string | null = customName || null;
+      let email: string | null = null;
+      let name: string | null = null;
       let avatarUrl: string | undefined = undefined;
       let uid: string | null = null;
-      let githubUrl: string | undefined = customGithub || undefined;
+      let githubUrl: string | undefined = undefined;
 
-      if (!email && providerName === "google") {
+      if (providerName === "google") {
         try {
           const result = await signInWithPopup(auth, googleProvider);
           const user = result.user;
@@ -97,23 +51,17 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
           name = user.displayName;
           avatarUrl = user.photoURL || undefined;
         } catch (firebaseErr: any) {
-          console.warn("Firebase Auth popup result:", firebaseErr);
-
-          if (firebaseErr?.code === "auth/popup-closed-by-user") {
-            toast.dismiss(toastId);
-            toast.error("Sign-in popup was closed before completing.");
-            setLoading(null);
-            return;
-          }
-
+          console.warn("Google popup sign-in error:", firebaseErr);
           toast.dismiss(toastId);
-          setShowFallbackModal(true);
+          if (firebaseErr?.code === "auth/popup-closed-by-user" || firebaseErr?.code === "auth/cancelled-popup-request") {
+            toast.error("Google sign-in popup was closed.");
+          } else {
+            toast.error("Google sign-in failed: " + (firebaseErr?.message || "Unknown error"));
+          }
           setLoading(null);
           return;
         }
-      }
-
-      if (!email && !githubUrl && providerName === "github") {
+      } else if (providerName === "github") {
         try {
           const result = await signInWithPopup(auth, githubProvider);
           const user = result.user;
@@ -127,17 +75,13 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
             githubUrl = `https://github.com/${screenName.replace(/^https?:\/\/(www\.)?github\.com\//i, "")}`;
           }
         } catch (firebaseErr: any) {
-          console.warn("GitHub Firebase popup auth result:", firebaseErr);
-
-          if (firebaseErr?.code === "auth/popup-closed-by-user") {
-            toast.dismiss(toastId);
-            toast.error("GitHub Sign-in popup was closed before completing.");
-            setLoading(null);
-            return;
-          }
-
+          console.warn("GitHub popup sign-in error:", firebaseErr);
           toast.dismiss(toastId);
-          setShowGithubModal(true);
+          if (firebaseErr?.code === "auth/popup-closed-by-user" || firebaseErr?.code === "auth/cancelled-popup-request") {
+            toast.error("GitHub sign-in popup was closed.");
+          } else {
+            toast.error("GitHub sign-in failed: " + (firebaseErr?.message || "Unknown error"));
+          }
           setLoading(null);
           return;
         }
@@ -145,20 +89,18 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
 
       const cleanEmail = email ? email.trim().toLowerCase() : "";
       const cleanGithub = githubUrl ? githubUrl.trim() : "";
-
-      const cleanName = name ? name.trim() : (cleanEmail ? cleanEmail.split("@")[0] : "GitHub User");
-      const formattedUid = uid || `${providerName}_${(cleanEmail || cleanGithub).replace(/[^a-zA-Z0-9]/g, "_")}`;
+      const cleanName = name ? name.trim() : (cleanEmail ? cleanEmail.split("@")[0] : "User");
 
       const res = await fetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           provider: providerName,
-          uid: formattedUid,
+          uid: uid,
           email: cleanEmail,
           github: cleanGithub,
           name: cleanName,
-          avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${formattedUid}`,
+          avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid || cleanEmail || providerName}`,
         }),
       });
 
@@ -168,18 +110,30 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
         throw new Error(data.error || "Authentication failed.");
       }
 
+      toast.dismiss(toastId);
+
+      if (data.requiresMfa) {
+        setMfaPrompt({
+          userId: data.userId,
+          userEmail: data.email,
+          userName: data.name,
+        });
+        toast("Google Authenticator MFA required for this account.", { icon: "🔒" });
+        return;
+      }
+
       const loggedInUser = data.user;
 
       if (loggedInUser.email) localStorage.setItem("studybuddy_last_email", loggedInUser.email);
       if (loggedInUser.github) localStorage.setItem("studybuddy_last_github", loggedInUser.github);
 
       if (data.isNewUser) {
-        toast.success(`Account created! Welcome to Study Buddy, ${loggedInUser.name}!`, { id: toastId });
+        toast.success(`Account created! Welcome to Study Buddy, ${loggedInUser.name}!`);
       } else {
         if (loggedInUser.status === 0) {
-          toast("Welcome back! Your account is currently deactivated. Access settings to reactivate.", { id: toastId, icon: "🔒" });
+          toast("Welcome back! Your account is currently deactivated. Access settings to reactivate.", { icon: "🔒" });
         } else {
-          toast.success(`Welcome back, ${loggedInUser.name}!`, { id: toastId });
+          toast.success(`Welcome back, ${loggedInUser.name}!`);
         }
       }
 
@@ -194,37 +148,40 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
     }
   };
 
-  const handleCustomSubmit = (e: React.FormEvent) => {
+  const handleVerifyLoginMfa = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fallbackEmail) {
-      toast.error("Please enter your account email address.");
+    if (!mfaPrompt || !totpCodeInput.trim()) {
+      toast.error("Please enter the 6-digit code from your Google Authenticator app.");
       return;
     }
-    handleOAuthSignIn("google", fallbackEmail.trim(), fallbackName.trim());
-  };
 
-  const handleGithubSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!githubInput.trim()) {
-      toast.error("Please enter your GitHub profile URL, username, or registered email.");
-      return;
+    setMfaVerifying(true);
+    try {
+      const res = await fetch("/api/auth/mfa/login-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: mfaPrompt.userId,
+          code: totpCodeInput.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Verification failed");
+
+      const loggedInUser = data.user;
+      if (loggedInUser.email) localStorage.setItem("studybuddy_last_email", loggedInUser.email);
+      if (loggedInUser.github) localStorage.setItem("studybuddy_last_github", loggedInUser.github);
+
+      toast.success(`MFA Code Verified! Welcome back, ${loggedInUser.name || "User"}!`);
+      localStorage.setItem("portal_user_id", loggedInUser.id);
+      localStorage.setItem("portal_user", JSON.stringify(loggedInUser));
+      onLoginSuccess(loggedInUser);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to verify 2FA code.");
+    } finally {
+      setMfaVerifying(false);
     }
-    const rawInput = githubInput.trim();
-    let userEmail = "";
-    let userGithub = "";
-
-    if (rawInput.includes("@")) {
-      userEmail = rawInput;
-    } else {
-      userGithub = rawInput.startsWith("http://") || rawInput.startsWith("https://")
-        ? rawInput
-        : rawInput.startsWith("github.com/")
-        ? `https://${rawInput}`
-        : `https://github.com/${rawInput.replace(/^@/, "")}`;
-    }
-
-    setShowGithubModal(false);
-    handleOAuthSignIn("github", userEmail || undefined, undefined, userGithub || undefined);
   };
 
   return (
@@ -301,180 +258,111 @@ export default function AuthPage({ onLoginSuccess }: AuthPageProps) {
       {/* Right Pane: Authentication Canvas */}
       <section className="w-full md:w-1/2 min-h-[55vh] md:min-h-screen bg-[#181a1e] flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-[420px] bg-[#22252b]/90 backdrop-blur-md p-8 md:p-10 rounded-2xl shadow-2xl border border-slate-700/30 space-y-6">
-          <header>
-            <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">Welcome</h2>
-            <p className="text-xs text-slate-400 leading-normal">
-              Signin with google or github to continue your momentum.
-            </p>
-          </header>
+          {mfaPrompt ? (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              <header className="flex items-center gap-3 border-b border-slate-700/50 pb-4">
+                <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white tracking-tight">Two-Factor Authentication</h2>
+                  <p className="text-xs text-slate-400 font-mono">Google Authenticator TOTP</p>
+                </div>
+              </header>
 
-          {/* Social Auth Grid */}
-          <div className="grid grid-cols-1 gap-3.5">
-            {/* Continue with Google */}
-            <button
-              type="button"
-              id="google-login-btn"
-              onClick={() => handleOAuthSignIn("google")}
-              disabled={loading !== null}
-              className="flex items-center justify-center gap-3 w-full py-3.5 px-4 rounded-xl bg-white text-slate-900 font-semibold text-sm hover:bg-slate-100 transition-all active:scale-[0.98] shadow-md cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {loading === "google" ? (
-                <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                </svg>
-              )}
-              <span>Continue with Google</span>
-            </button>
+              <div className="bg-slate-800/50 border border-slate-700/50 p-4 rounded-xl text-xs text-slate-300 leading-relaxed font-sans">
+                Enter the 6-digit verification code from your <strong className="text-white">Google Authenticator</strong> app for <span className="text-indigo-400 font-mono">{mfaPrompt.userEmail || mfaPrompt.userName || "your account"}</span>.
+              </div>
 
-            {/* Continue with GitHub */}
-            <button
-              type="button"
-              id="github-login-btn"
-              onClick={() => handleOAuthSignIn("github")}
-              disabled={loading !== null}
-              className="flex items-center justify-center gap-3 w-full py-3.5 px-4 rounded-xl bg-[#24292f] text-white font-semibold text-sm hover:bg-[#1a1e22] transition-all active:scale-[0.98] border border-white/10 shadow-md cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {loading === "github" ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Github className="w-5 h-5 shrink-0 text-white" />
-              )}
-              <span>Continue with GitHub</span>
-            </button>
-          </div>
+              <form onSubmit={handleVerifyLoginMfa} className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-300 block mb-1.5 uppercase tracking-wider">
+                    6-Digit Authenticator Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    autoFocus
+                    placeholder="000000"
+                    value={totpCodeInput}
+                    onChange={(e) => setTotpCodeInput(e.target.value.replace(/\D/g, ""))}
+                    className="w-full px-4 py-3 bg-[#181a1e] border border-slate-600 rounded-xl text-lg font-mono font-extrabold tracking-widest text-center text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={mfaVerifying || totpCodeInput.length !== 6}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {mfaVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  Verify &amp; Continue
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMfaPrompt(null);
+                    setTotpCodeInput("");
+                  }}
+                  className="w-full py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer text-center"
+                >
+                  Cancel &amp; Back to Login
+                </button>
+              </form>
+            </div>
+          ) : (
+            <>
+              <header>
+                <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">Welcome</h2>
+                <p className="text-xs text-slate-400 leading-normal">
+                  Signin with google or github to continue your momentum.
+                </p>
+              </header>
+
+              {/* Social Auth Grid */}
+              <div className="grid grid-cols-1 gap-3.5">
+                {/* Continue with Google */}
+                <button
+                  type="button"
+                  id="google-login-btn"
+                  onClick={() => handleOAuthSignIn("google")}
+                  disabled={loading !== null}
+                  className="flex items-center justify-center gap-3 w-full py-3.5 px-4 rounded-xl bg-white text-slate-900 font-semibold text-sm hover:bg-slate-100 transition-all active:scale-[0.98] shadow-md cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {loading === "google" ? (
+                    <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                    </svg>
+                  )}
+                  <span>Continue with Google</span>
+                </button>
+
+                {/* Continue with GitHub */}
+                <button
+                  type="button"
+                  id="github-login-btn"
+                  onClick={() => handleOAuthSignIn("github")}
+                  disabled={loading !== null}
+                  className="flex items-center justify-center gap-3 w-full py-3.5 px-4 rounded-xl bg-[#24292f] text-white font-semibold text-sm hover:bg-[#1a1e22] transition-all active:scale-[0.98] border border-white/10 shadow-md cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {loading === "github" ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Github className="w-5 h-5 shrink-0 text-white" />
+                  )}
+                  <span>Continue with GitHub</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </section>
-
-      {/* Fallback Google Account Modal */}
-      {showFallbackModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1c1f26] border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-100"
-          >
-            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
-                <svg className="w-6 h-6" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-100 text-base">Google Account Verification</h3>
-                <p className="text-xs text-slate-400">Confirm your profile details to sign in</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleCustomSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-mono text-slate-400 mb-1">Google Email Address</label>
-                <input
-                  type="email"
-                  value={fallbackEmail}
-                  onChange={(e) => setFallbackEmail(e.target.value)}
-                  placeholder="your.name@gmail.com"
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-slate-400 mb-1">Display Full Name</label>
-                <input
-                  type="text"
-                  value={fallbackName}
-                  onChange={(e) => setFallbackName(e.target.value)}
-                  placeholder="Your Full Name"
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowFallbackModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading !== null}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {loading !== null ? "Processing..." : "Continue"}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Fallback GitHub Linkage Modal */}
-      {showGithubModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#1c1f26] border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-slate-100"
-          >
-            <div className="flex items-center gap-3 border-b border-slate-800 pb-3">
-              <div className="p-2 rounded-xl bg-slate-800 text-white">
-                <Github className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-100 text-base">GitHub Account Verification</h3>
-                <p className="text-xs text-slate-400">Provide your GitHub profile URL, username, or registered email</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleGithubSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-mono text-slate-400 mb-1">
-                  GitHub Profile URL, Username, or Email
-                </label>
-                <input
-                  type="text"
-                  value={githubInput}
-                  onChange={(e) => setGithubInput(e.target.value)}
-                  placeholder="e.g. https://github.com/shobhitgagrani or shobhitgagrani"
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                />
-                <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed font-mono">
-                  This connects directly to your existing Study Buddy account profile and syllabus data.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowGithubModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading !== null}
-                  className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-white text-slate-900 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {loading !== null ? "Authenticating..." : "Link & Sign In"}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
     </main>
   );
 }

@@ -277,15 +277,32 @@ export default function KanbanBoard({
 
                       {/* Task Title & Log Time */}
                       <div className="flex flex-col gap-1.5 min-w-0">
-                        <h4
-                          onClick={() => onViewTaskDetails && onViewTaskDetails(task)}
-                          className={`font-semibold text-xs sm:text-sm leading-snug transition-colors cursor-pointer hover:text-indigo-600 hover:underline break-words [overflow-wrap:anywhere] whitespace-normal ${
-                            col.id === "completed" ? "line-through text-slate-400 font-normal" : "text-slate-800"
-                          }`}
-                        >
-                          {col.id === "completed" && <span className="text-emerald-500 mr-1 font-bold shrink-0">✓</span>}
-                          {task.title}
-                        </h4>
+                        <div className="flex items-start justify-between gap-1">
+                          <h4
+                            onClick={() => onViewTaskDetails && onViewTaskDetails(task)}
+                            className={`font-semibold text-xs sm:text-sm leading-snug transition-colors cursor-pointer hover:text-indigo-600 hover:underline break-words [overflow-wrap:anywhere] whitespace-normal ${
+                              col.id === "completed" ? "line-through text-slate-400 font-normal" : "text-slate-800"
+                            }`}
+                          >
+                            {col.id === "completed" && <span className="text-emerald-500 mr-1 font-bold shrink-0">✓</span>}
+                            {task.title}
+                          </h4>
+                          {task.notes && (
+                            <Tooltip
+                              position="top"
+                              content={
+                                <div className="max-w-xs text-left font-sans p-1">
+                                  <span className="font-bold text-amber-300 block mb-1">📝 Task Notes</span>
+                                  <p className="text-slate-100 text-xs leading-relaxed whitespace-pre-wrap font-normal">{task.notes}</p>
+                                </div>
+                              }
+                            >
+                              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 px-1.5 py-0.5 rounded-md cursor-help shrink-0">
+                                📝
+                              </span>
+                            </Tooltip>
+                          )}
+                        </div>
                         
                         {task.subjectId && (
                           <div className="text-[10px] font-bold text-slate-500 font-mono break-words [overflow-wrap:anywhere] whitespace-normal bg-slate-100/80 px-2 py-1 rounded max-w-full w-fit leading-relaxed">

@@ -27,13 +27,24 @@ service cloud.firestore {
 
     // --- ENTITY VALIDATION BLUEPRINTS ---
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'provider', 'email', 'name'])
+      return data.keys().hasAll(['id', 'name'])
         && data.id is string && data.id.size() <= 128
-        && data.provider is string && data.provider.size() <= 100
-        && data.email is string && data.email.size() <= 256
         && data.name is string && data.name.size() <= 256
+        && (!data.keys().hasAny(['provider']) || (data.provider is string && data.provider.size() <= 100))
+        && (!data.keys().hasAny(['email']) || (data.email is string && data.email.size() <= 256))
         && (!data.keys().hasAny(['avatarUrl']) || data.avatarUrl is string)
-        && (!data.keys().hasAny(['createdAt']) || data.createdAt is string);
+        && (!data.keys().hasAny(['createdAt']) || data.createdAt is string)
+        && (!data.keys().hasAny(['updatedAt']) || data.updatedAt is string)
+        && (!data.keys().hasAny(['status']) || data.status is number)
+        && (!data.keys().hasAny(['isDeleted']) || data.isDeleted is bool)
+        && (!data.keys().hasAny(['deletedAt']) || data.deletedAt is string)
+        && (!data.keys().hasAny(['isDeactivated']) || data.isDeactivated is bool)
+        && (!data.keys().hasAny(['deactivatedAt']) || (data.deactivatedAt is string || data.deactivatedAt == null))
+        && (!data.keys().hasAny(['twoFactorEnabled']) || data.twoFactorEnabled is bool)
+        && (!data.keys().hasAny(['totpSecret']) || (data.totpSecret is string || data.totpSecret == null))
+        && (!data.keys().hasAny(['github']) || data.github is string)
+        && (!data.keys().hasAny(['warningsCount']) || data.warningsCount is number)
+        && (!data.keys().hasAny(['isBlocked']) || data.isBlocked is bool);
     }
 
     function isValidDashboard(data) {
@@ -98,7 +109,8 @@ service cloud.firestore {
         && (!data.keys().hasAny(['pushNotifications']) || data.pushNotifications is bool)
         && (!data.keys().hasAny(['weeklyDigests']) || data.weeklyDigests is bool)
         && (!data.keys().hasAny(['isPublicProfile']) || data.isPublicProfile is bool)
-        && (!data.keys().hasAny(['twoFactorEnabled']) || data.twoFactorEnabled is bool);
+        && (!data.keys().hasAny(['twoFactorEnabled']) || data.twoFactorEnabled is bool)
+        && (!data.keys().hasAny(['totpSecret']) || (data.totpSecret is string || data.totpSecret == null));
     }
 
     function isValidHistoryLog(data) {
@@ -154,6 +166,14 @@ service cloud.firestore {
     match /users/{userId}/history/{logId} {
       allow get, list, read, delete: if true;
       allow create, update: if isValidHistoryLog(incoming());
+    }
+
+    match /users/{userId}/reminders/{reminderId} {
+      allow get, list, read, create, update, delete: if true;
+    }
+
+    match /users/{userId}/notes/{noteId} {
+      allow get, list, read, create, update, delete: if true;
     }
 
     match /feedbacks/{feedbackId} {

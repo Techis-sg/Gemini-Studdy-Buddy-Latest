@@ -195,8 +195,10 @@ export function SubjectDatatable({
   ];
 
   const renderSubRow = (sub: Subject) => {
-    const resourcesList = sub.resource
-      ? sub.resource.split(",").map(res => parseResource(res.trim())).filter(p => p.label)
+    const rawRes = sub.resource || "";
+    const delimiter = rawRes.includes(";;") ? ";;" : rawRes.includes("||") ? "||" : ",";
+    const resourcesList = rawRes
+      ? rawRes.split(delimiter).map(res => parseResource(res.trim())).filter(p => p.label)
       : [];
 
     const videos = resourcesList.filter(r => r.type === "video");
@@ -259,13 +261,31 @@ export function SubjectDatatable({
                 ) : (
                   <div className="flex flex-col gap-1.5">
                     {textbooks.map((parsed, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1.5 bg-slate-100/80 border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold shadow-sm w-full"
-                      >
-                        <span className="shrink-0">{parsed.icon}</span>
-                        <span className="truncate">{parsed.label}</span>
-                      </span>
+                      parsed.url ? (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setActiveInterceptLink({
+                              label: parsed.label,
+                              url: parsed.url || "",
+                            });
+                          }}
+                          className="inline-flex items-center gap-1.5 text-left bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-600 px-3 py-2 rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer w-full"
+                        >
+                          <span className="shrink-0">{parsed.icon}</span>
+                          <span className="truncate">{parsed.label}</span>
+                        </button>
+                      ) : (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1.5 bg-slate-100/80 border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-xs font-semibold shadow-sm w-full"
+                        >
+                          <span className="shrink-0">{parsed.icon}</span>
+                          <span className="truncate">{parsed.label}</span>
+                        </span>
+                      )
                     ))}
                   </div>
                 )}

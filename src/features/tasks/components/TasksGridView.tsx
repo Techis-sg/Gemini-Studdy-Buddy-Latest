@@ -62,12 +62,29 @@ export default function TasksGridView({
                     </div>
                   </div>
 
-                  <h4
-                    onClick={() => onViewDetails && onViewDetails(task)}
-                    className="font-bold text-slate-800 text-md leading-tight mb-1 cursor-pointer hover:text-indigo-600 hover:underline transition-colors"
-                  >
-                    {task.title}
-                  </h4>
+                  <div className="flex items-start justify-between gap-1 mb-1">
+                    <h4
+                      onClick={() => onViewDetails && onViewDetails(task)}
+                      className="font-bold text-slate-800 text-md leading-tight cursor-pointer hover:text-indigo-600 hover:underline transition-colors"
+                    >
+                      {task.title}
+                    </h4>
+                    {task.notes && (
+                      <Tooltip
+                        position="top"
+                        content={
+                          <div className="max-w-xs text-left font-sans p-1">
+                            <span className="font-bold text-amber-300 block mb-1">📝 Task Notes</span>
+                            <p className="text-slate-100 text-xs leading-relaxed whitespace-pre-wrap font-normal">{task.notes}</p>
+                          </div>
+                        }
+                      >
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 px-1.5 py-0.5 rounded-md cursor-help shrink-0">
+                          📝 Note
+                        </span>
+                      </Tooltip>
+                    )}
+                  </div>
                   
                   {task.subjectId && (
                     <div className="text-[10px] font-bold text-slate-600 mb-2 truncate bg-indigo-50/50 px-2 py-0.5 rounded-md border border-indigo-100/20 inline-block font-mono">

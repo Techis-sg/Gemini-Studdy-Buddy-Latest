@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { IconLoader2 as Loader2, IconSparkles as Sparkles, IconPlus as Plus, IconBorderHorizontal as SlidersHorizontal } from '@tabler/icons-react';
+import { IconLoader2 as Loader2, IconSparkles as Sparkles, IconPlus as Plus, IconBorderHorizontal as SlidersHorizontal, IconTrash as Trash } from '@tabler/icons-react';
+import { Tooltip } from "@components/ui";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Flame,
@@ -12,8 +13,9 @@ import {
   ChevronRight,
   Target
 } from "lucide-react";
-import { Dashboard, Subject, Task } from "@/types";
+import { Dashboard, Subject, Task, ReminderNote } from "@/types";
 import { apiFetch, toast, getSyncedSubjects, getTodayString, getDateOffsetString } from "@utils/index";
+import { getUserReminders, saveUserReminder, deleteUserReminder } from "@/db";
 
 // Components & layouts
 import SidebarLayout from "@layouts/SidebarLayout";
@@ -28,6 +30,7 @@ import { ProfileSettings } from "@features/settings";
 import { HistoryLogs } from "@features/history";
 import { UploadsPage } from "@features/uploads";
 import { CalendarView } from "@features/calendar";
+import { NotesView } from "@features/notes";
 import {
   AIImporter,
   LogTime,
@@ -69,7 +72,7 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
   const navigate = useNavigate();
 
   const activeDashboardId = dashId || "default";
-  const activeTab = (tab || "dashboard") as "dashboard" | "overview" | "subjects" | "kanban" | "calendar" | "tasks" | "history" | "settings" | "uploads";
+  const activeTab = (tab || "dashboard") as "dashboard" | "overview" | "subjects" | "kanban" | "calendar" | "tasks" | "history" | "settings" | "uploads" | "notes";
 
   const [dashboards, setDashboards] = useState<Dashboard[]>([]);
   const [subjects, setSubjects] = useState<Record<string, Subject[]>>({});
@@ -109,6 +112,121 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
 
   // Calendar selected date
   const [calendarSelectedDate, setCalendarSelectedDate] = useState(new Date().toLocaleDateString("en-CA"));
+
+  // Dashboard Reminders state
+  const [dashboardReminders, setDashboardReminders] = useState<ReminderNote[]>([]);
+
+  useEffect(() => {
+    async function loadReminders() {
+      try {
+        const rems = await getUserReminders(user?.id, activeDashboardIdReal);
+        if (rems.length > 0) {
+          setDashboardReminders(rems);
+        } else {
+          const todayStr = new Date().toISOString().split("T")[0];
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 10);
+          const overdue10Days = yesterday.toISOString().split("T")[0];
+
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+          const defaults: ReminderNote[] = [
+            {
+              id: "rem_1",
+              dashboardId: activeDashboardIdReal,
+              title: "Revise Graph Algorithms & Shortest Path Formulas",
+              date: todayStr,
+              completed: false,
+              color: "#fef08a",
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "rem_2",
+              dashboardId: activeDashboardIdReal,
+              title: "Submit Machine Learning Assignment #3",
+              date: overdue10Days,
+              completed: false,
+              color: "#fef08a",
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "rem_3",
+              dashboardId: activeDashboardIdReal,
+              title: "Prepare notes for Database Normalization & 3NF",
+              date: tomorrowStr,
+              completed: false,
+              color: "#fef08a",
+              createdAt: new Date().toISOString(),
+            },
+          ];
+          setDashboardReminders(defaults);
+          for (const rem of defaults) {
+            await saveUserReminder(user?.id, rem);
+          }
+        }
+      } catch (err) {
+        console.warn("Error loading dashboard reminders:", err);
+      }
+    }
+    loadReminders();
+  }, [user?.id, activeDashboardIdReal]);
+
+  const handleToggleDashboardReminder = async (id: string) => {
+    const updated = dashboardReminders.map((r) =>
+      r.id === id ? { ...r, completed: !r.completed } : r
+    );
+    setDashboardReminders(updated);
+    const target = updated.find((r) => r.id === id);
+    if (target) {
+      await saveUserReminder(user?.id, target);
+      toast.success(target.completed ? "Reminder marked done!" : "Reminder status reset.");
+    }
+  };
+
+  const handleDeleteDashboardReminder = async (id: string) => {
+    setDashboardReminders((prev) => prev.filter((r) => r.id !== id));
+    await deleteUserReminder(user?.id, id);
+    toast.success("Reminder deleted.");
+  };
+
+  const handleSaveDashboardReminder = async (rem: ReminderNote) => {
+    setDashboardReminders((prev) => {
+      const idx = prev.findIndex((r) => r.id === rem.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = rem;
+        return copy;
+      }
+      return [rem, ...prev];
+    });
+    await saveUserReminder(user?.id, rem);
+  };
+
+  const getRelativeDateBadge = (dateStr: string) => {
+    if (!dateStr) return { text: "Planned", color: "bg-slate-100 text-slate-700 border-slate-200" };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const target = new Date(dateStr + "T00:00:00");
+    target.setHours(0, 0, 0, 0);
+
+    const diffTime = target.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return { text: "Planned For Today", color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    } else if (diffDays === 1) {
+      return { text: "Tomorrow", color: "bg-purple-50 text-purple-700 border-purple-200" };
+    } else if (diffDays < 0) {
+      const positiveDays = Math.abs(diffDays);
+      return { text: `Overdue by ${positiveDays} day${positiveDays > 1 ? "s" : ""}`, color: "bg-rose-50 text-rose-700 border-rose-200 font-bold" };
+    } else {
+      return { text: `Upcoming`, color: "bg-amber-50 text-amber-800 border-amber-200" };
+    }
+  };
 
   const handleOpenCalendarAddTask = (dateStr: string) => {
     setAddTaskInitialDate(dateStr);
@@ -326,6 +444,7 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
     subjects: "Subjects",
     kanban: "Kanban Board",
     calendar: "Calendar",
+    notes: "Notes",
     tasks: "Tasks",
     uploads: "Uploads",
     history: "History",
@@ -763,6 +882,84 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
                             )}
                           </div>
                         </div>
+
+                        {/* Reminders Card below Today's Study Plan */}
+                        <div className="bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                              <SparklesIcon className="w-4 h-4 text-amber-500" />
+                              Study Reminders & Sticky Notes
+                            </h3>
+                            <button
+                              onClick={() => handleTabClick("notes")}
+                              className="text-[10px] font-mono font-bold text-amber-600 hover:text-amber-700 uppercase cursor-pointer"
+                            >
+                              All Notes →
+                            </button>
+                          </div>
+
+                          <div className="space-y-2.5">
+                            {dashboardReminders.length === 0 ? (
+                              <p className="text-xs font-mono text-slate-400 py-6 text-center">
+                                No active study reminders.
+                              </p>
+                            ) : (
+                              dashboardReminders.map((rem) => {
+                                const badge = getRelativeDateBadge(rem.date);
+                                return (
+                                  <div
+                                    key={rem.id}
+                                    className={`group relative p-4 border border-slate-100 rounded-2xl transition-all flex items-center justify-between gap-3 ${
+                                      rem.completed
+                                        ? "bg-slate-50/10 opacity-75"
+                                        : "bg-amber-50/20 hover:bg-amber-50/40 border-amber-100/50"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <button
+                                        onClick={() => handleToggleDashboardReminder(rem.id)}
+                                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer ${
+                                          rem.completed
+                                            ? "bg-emerald-500 border-emerald-500 text-white"
+                                            : "border-slate-300 hover:border-amber-500"
+                                        }`}
+                                      >
+                                        {rem.completed && (
+                                          <svg className="w-3.5 h-3.5 stroke-2 stroke-current" fill="none" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                      <div className="min-w-0">
+                                        <p className={`text-xs font-bold truncate ${
+                                          rem.completed ? "line-through !text-slate-400 dark:!text-slate-400" : "!text-slate-900 dark:!text-slate-900"
+                                        }`}>
+                                          {rem.title}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded-md font-bold border ${badge.color}`}>
+                                            {badge.text}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 shrink-0">
+                                      <Tooltip content="Delete Reminder" position="top">
+                                        <button
+                                          onClick={() => handleDeleteDashboardReminder(rem.id)}
+                                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/80 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                                        >
+                                          <Trash className="w-3.5 h-3.5" />
+                                        </button>
+                                      </Tooltip>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Right Side: Inspiration (Motivation) Card FIRST, then Upcoming Schedule Card SECOND */}
@@ -852,6 +1049,18 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
               </div>
             )}
 
+            {activeTab === "notes" && (
+              <NotesView
+                tasks={currentTasks}
+                subjects={currentSubjects}
+                activeDashboardId={activeDashboardIdReal}
+                user={user}
+                reminders={dashboardReminders}
+                onToggleReminder={handleToggleDashboardReminder}
+                onDeleteReminder={handleDeleteDashboardReminder}
+                onSaveReminder={handleSaveDashboardReminder}
+              />
+            )}
             {activeTab === "overview" && (
               <OverviewStats tasks={currentTasks} subjects={currentSubjects} />
             )}

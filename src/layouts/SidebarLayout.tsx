@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { IconSparkles as Sparkles, IconBook as BookOpen, IconCalendar as CalendarIcon, IconPlus as Plus, IconTrash as Trash, IconFlame as Flame, IconLogout as LogOut, IconList as List, IconHistory as History, IconSettings as Settings, IconSun as Sun, IconMoon as Moon, IconUpload as Upload, IconLayoutDashboard, IconLayoutKanban, IconReportAnalytics, IconMessageReport, IconX } from '@tabler/icons-react';
+import { IconSparkles as Sparkles, IconBook as BookOpen, IconCalendar as CalendarIcon, IconPlus as Plus, IconTrash as Trash, IconFlame as Flame, IconLogout as LogOut, IconList as List, IconHistory as History, IconSettings as Settings, IconSun as Sun, IconMoon as Moon, IconUpload as Upload, IconLayoutDashboard, IconLayoutKanban, IconReportAnalytics, IconMessageReport, IconX, IconNote } from '@tabler/icons-react';
 import { Dashboard, Task } from "@/types";
 import { Select, Tooltip } from "@components/ui";
 import { apiFetch, toast, getTodayString, getDateOffsetString } from "@utils/index";
@@ -184,6 +184,7 @@ export function SidebarLayout({
               { id: "subjects", label: "Subjects", icon: BookOpen, color: "bg-sky-50 text-sky-700 border-sky-100/50" },
               { id: "kanban", label: "Kanban Board", icon: IconLayoutKanban, color: "bg-purple-50 text-purple-700 border-purple-100/50" },
               { id: "calendar", label: "Calendar", icon: CalendarIcon, color: "bg-amber-50 text-amber-700 border-amber-100/50" },
+              { id: "notes", label: "Notes", icon: IconNote, color: "bg-amber-50 text-amber-800 border-amber-200/50" },
               { id: "overview", label: "Insights", icon: IconReportAnalytics, color: "bg-indigo-50 text-indigo-700 border-indigo-100/50" },
               { id: "uploads", label: "Uploads", icon: Upload, color: "bg-pink-50 text-pink-700 border-pink-100/50" },
               { id: "history", label: "History", icon: History, color: "bg-blue-50 text-blue-700 border-blue-100/50" },

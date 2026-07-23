@@ -114,10 +114,12 @@ export function parseResource(rawStr: string): DisplayResource {
       icon: "📺",
     };
   } else if (trimmed.startsWith("textbook:")) {
-    const label = trimmed.substring(9);
+    const content = trimmed.substring(9);
+    const parts = content.split("|");
     return {
       type: "textbook",
-      label: label || "Textbook",
+      label: parts[0] || "Textbook",
+      url: parts[1] || "",
       icon: "📖",
     };
   } else if (trimmed.startsWith("link:")) {

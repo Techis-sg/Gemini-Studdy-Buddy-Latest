@@ -96,3 +96,28 @@ export interface UserSettings {
   weeklyDigests: boolean;
   isPublicProfile: boolean;
 }
+
+export interface ReminderNote {
+  id: string;
+  dashboardId?: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  completed: boolean;
+  color?: string; // e.g. "#fef08a"
+  createdAt: string;
+}
+
+export interface StudyNote {
+  id: string;
+  dashboardId?: string;
+  taskId: string; // e.g. "TSK-001" or task.id
+  taskTitle?: string;
+  subjectId?: string;
+  subjectName?: string;
+  note: string;
+  color?: string; // e.g. "#fed7aa"
+  tags?: string[];
+  isFavorite?: boolean;
+  createdAt?: string;
+}
+

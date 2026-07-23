@@ -30,6 +30,7 @@ export function ProfileSettings({
   const userLastName = user?.lastName || (names.length > 1 ? names.slice(1).join(" ") : "");
 
   const isGithubSignup = user?.provider === "github";
+  const isGithubDisabled = isGithubSignup || !!user?.github;
 
   // Form states with customizable typography and branding values
   const [formData, setFormData] = useState({
@@ -37,8 +38,6 @@ export function ProfileSettings({
     lastName: userLastName,
     email: user?.email || "",
     github: user?.github || (isGithubSignup ? `https://github.com/${user?.name?.toLowerCase().replace(/\s+/g, "") || "user"}` : ""),
-    addressLine1: "",
-    addressLine2: "",
     bio: "",
     theme: "light",
     defaultTab: "tasks",
@@ -59,8 +58,6 @@ export function ProfileSettings({
     lastName: "",
     email: "",
     github: "",
-    addressLine1: "",
-    addressLine2: "",
     bio: "",
   });
 
@@ -211,7 +208,7 @@ export function ProfileSettings({
           errorMsg = "Must be a valid email address";
         }
       }
-    } else if (name === "addressLine1" || name === "addressLine2" || name === "bio") {
+    } else if (name === "bio") {
       value = value.substring(0, APP_CONFIG.VALIDATION.ADDRESS_BIO_MAX);
       if (value.length >= APP_CONFIG.VALIDATION.ADDRESS_BIO_MAX) {
         errorMsg = `Reached maximum ${APP_CONFIG.VALIDATION.ADDRESS_BIO_MAX} characters limit`;
@@ -252,6 +249,7 @@ export function ProfileSettings({
       const combinedPayload = {
         ...formData,
         github: finalGithub,
+        avatarUrl: avatarUrl,
         twoFactorEnabled,
       };
 
@@ -267,16 +265,18 @@ export function ProfileSettings({
       if (formData.email) localStorage.setItem("studybuddy_last_email", formData.email.trim());
       if (finalGithub) localStorage.setItem("studybuddy_last_github", finalGithub.trim());
 
-      // 2. Sync profile identity name and avatar to user state
+      // 2. Sync profile identity name, github, and avatar to user state
       const updatedFullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
       const profileRes = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: user?.provider || "simulated_oauth",
-          email: user?.email,
+          provider: user?.provider || "google",
+          uid: user?.id,
+          email: formData.email || user?.email,
+          github: finalGithub || user?.github,
           name: updatedFullName,
-          avatarUrl: avatarUrl,
+          avatarUrl: avatarUrl || user?.avatarUrl,
         }),
       });
 
@@ -568,10 +568,13 @@ export function ProfileSettings({
             {/* Profile Avatar Refresher Block */}
             <div className="flex items-center gap-5 bg-slate-50/40 p-4 rounded-2xl border border-slate-100">
               <img
-                src={avatarUrl}
+                src={avatarUrl || user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id || "user"}`}
                 alt="Profile Avatar"
                 referrerPolicy="no-referrer"
-                className="w-16 h-16 rounded-full border-2 border-indigo-100 bg-white"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id || "user"}`;
+                }}
+                className="w-16 h-16 rounded-full border-2 border-indigo-100 bg-white object-cover"
               />
               <div className="space-y-1.5">
                 <h4 className="text-sm font-bold text-slate-800">Workspace Identity Card</h4>
@@ -652,22 +655,16 @@ export function ProfileSettings({
 
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">
-                  Email Address {!isGithubSignup && <span className="text-slate-400 font-normal lowercase">(disabled — initial signup method)</span>}
+                  Email Address <span className="text-slate-400 font-normal lowercase">(linked account — disabled)</span>
                 </label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  disabled={!isGithubSignup}
+                  disabled={true}
                   placeholder="you@example.com"
-                  className={`w-full text-xs font-bold px-3 py-2 border rounded-xl transition-all ${
-                    !isGithubSignup
-                      ? "border-slate-100 bg-slate-100 text-slate-400 cursor-not-allowed"
-                      : errors.email
-                        ? "border-rose-400 bg-slate-50/50 text-slate-800 focus:border-rose-500 focus:ring-rose-500/10"
-                        : "border-slate-200 bg-slate-50/50 text-slate-800 hover:border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/10 focus:bg-white focus:outline-none"
-                  }`}
+                  className="w-full text-xs font-bold px-3 py-2 border rounded-xl border-slate-100 bg-slate-100 text-slate-400 cursor-not-allowed"
                 />
                 {errors.email && (
                   <p className="text-rose-500 text-[10px] font-bold font-mono mt-1 uppercase tracking-wide">
@@ -679,7 +676,7 @@ export function ProfileSettings({
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                    GitHub Account Profile URL {isGithubSignup && <span className="text-slate-400 font-normal lowercase">(disabled — initial signup method)</span>}
+                    GitHub Account Profile URL {isGithubDisabled && <span className="text-slate-400 font-normal lowercase">(linked account — disabled)</span>}
                   </label>
                 </div>
                 <input
@@ -687,10 +684,10 @@ export function ProfileSettings({
                   name="github"
                   value={formData.github}
                   onChange={handleChange}
-                  disabled={isGithubSignup}
+                  disabled={isGithubDisabled}
                   placeholder="https://github.com/username"
                   className={`w-full text-xs font-bold px-3 py-2 border rounded-xl transition-all ${
-                    isGithubSignup
+                    isGithubDisabled
                       ? "border-slate-100 bg-slate-100 text-slate-400 cursor-not-allowed"
                       : errors.github
                         ? "border-rose-400 bg-slate-50/50 text-slate-800 focus:border-rose-500 focus:ring-rose-500/10"
@@ -700,62 +697,6 @@ export function ProfileSettings({
                 {errors.github && (
                   <p className="text-rose-500 text-[10px] font-bold font-mono mt-1 uppercase tracking-wide">
                     ⚠️ {errors.github}
-                  </p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                    Address Line 1
-                  </label>
-                  <span className="text-[9px] font-mono font-bold text-slate-400">
-                    {formData.addressLine1.length}/250
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  name="addressLine1"
-                  value={formData.addressLine1}
-                  onChange={handleChange}
-                  placeholder="Street Address, P.O. box, company name"
-                  className={`w-full text-xs font-bold px-3 py-2 border rounded-xl bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${
-                    errors.addressLine1
-                      ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/10"
-                      : "border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/10"
-                  }`}
-                />
-                {errors.addressLine1 && (
-                  <p className="text-rose-500 text-[10px] font-bold font-mono mt-1 uppercase tracking-wide">
-                    ⚠️ {errors.addressLine1}
-                  </p>
-                )}
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                    Address Line 2 (Optional)
-                  </label>
-                  <span className="text-[9px] font-mono font-bold text-slate-400">
-                    {formData.addressLine2.length}/250
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  name="addressLine2"
-                  value={formData.addressLine2}
-                  onChange={handleChange}
-                  placeholder="Apartment, suite, unit, building, floor, etc."
-                  className={`w-full text-xs font-bold px-3 py-2 border rounded-xl bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 transition-all text-slate-800 ${
-                    errors.addressLine2
-                      ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/10"
-                      : "border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/10"
-                  }`}
-                />
-                {errors.addressLine2 && (
-                  <p className="text-rose-500 text-[10px] font-bold font-mono mt-1 uppercase tracking-wide">
-                    ⚠️ {errors.addressLine2}
                   </p>
                 )}
               </div>
@@ -955,6 +896,7 @@ export function ProfileSettings({
                   { id: "subjects", name: "Subjects Catalog" },
                   { id: "kanban", name: "Kanban Board" },
                   { id: "calendar", name: "Timetable Calendar" },
+                  { id: "notes", name: "Notes & Reminders" },
                   { id: "overview", name: "Active Insights" },
                   { id: "history", name: "Activity Logs" },
                 ].map((menu) => {

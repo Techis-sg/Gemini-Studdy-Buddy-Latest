@@ -1,8 +1,4 @@
-import { initializeApp } from "firebase/app";
 import {
-  initializeFirestore,
-  memoryLocalCache,
-  setLogLevel,
   doc,
   getDoc,
   getDocs,
@@ -14,40 +10,11 @@ import {
   writeBatch,
 } from "firebase/firestore";
 
-setLogLevel("error");
-import fs from "fs";
-import path from "path";
-import { Dashboard, Subject, Task, TimeLog, TaskAttachment } from "@/types";
+import { db } from "../config/firebase";
+import { Dashboard, Subject, Task, TimeLog, TaskAttachment, ReminderNote, StudyNote } from "@/types";
 
-// Load configuration
-const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-let firebaseConfig: any = {};
-if (fs.existsSync(configPath)) {
-  try {
-    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-  } catch (err) {
-    console.warn("Failed to parse firebase-applet-config.json:", err);
-  }
-} else {
-  console.warn("firebase-applet-config.json not found in root directory");
-}
+export { db };
 
-// Initialize Firebase
-const app = initializeApp({
-  apiKey: firebaseConfig.apiKey || "mock-api-key",
-  authDomain: firebaseConfig.authDomain || "mock.firebaseapp.com",
-  projectId: firebaseConfig.projectId || "mock-project",
-  storageBucket: firebaseConfig.storageBucket || "mock.appspot.com",
-  messagingSenderId: firebaseConfig.messagingSenderId || "000000000000",
-  appId: firebaseConfig.appId || "1:000000000000:web:mock",
-});
-
-const serverDatabaseId = firebaseConfig.firestoreDatabaseId || "(default)";
-
-// Initialize Firestore with memory cache
-export const db = initializeFirestore(app, {
-  localCache: memoryLocalCache(),
-}, serverDatabaseId);
 
 export enum OperationType {
   CREATE = 'create',
@@ -479,29 +446,6 @@ export async function getUserProfileByGithub(githubUrlOrUsername: string): Promi
 }
 
 /**
- * Get any existing active user profile in Firestore
- */
-export async function getAnyExistingUser(): Promise<any> {
-  try {
-    const col = collection(db, "users");
-    const snap = await getDocs(col);
-    if (!snap.empty) {
-      for (const docSnap of snap.docs) {
-        const u = docSnap.data();
-        if (u && !u.isBlocked && u.status !== 2) {
-          return u;
-        }
-      }
-      return snap.docs[0].data();
-    }
-    return null;
-  } catch (error) {
-    console.warn("getAnyExistingUser check failed:", error);
-    return null;
-  }
-}
-
-/**
  * Create or save a dashboard
  */
 export async function saveUserDashboard(userId: string | undefined, dashboard: Dashboard): Promise<void> {
@@ -755,7 +699,7 @@ export async function deleteUserData(userId: string | undefined): Promise<void> 
   const normUid = getNormalizedUserId(userId);
   try {
     // 1. Delete subcollections
-    const subcollections = ["dashboards", "subjects", "tasks", "history", "settings"];
+    const subcollections = ["dashboards", "subjects", "tasks", "history", "settings", "reminders", "notes"];
     for (const sub of subcollections) {
       try {
         const colRef = collection(db, "users", normUid, sub);
@@ -774,6 +718,7 @@ export async function deleteUserData(userId: string | undefined): Promise<void> 
     const existing = snap.exists() ? snap.data() : {};
     await safeSetDoc(userRef, {
       id: normUid,
+      provider: existing.provider || "google",
       email: existing.email || "",
       name: "Deleted User",
       status: 2,
@@ -784,6 +729,102 @@ export async function deleteUserData(userId: string | undefined): Promise<void> 
   } catch (err) {
     console.error("Failed to purge user data from Firestore:", err);
     throw err;
+  }
+}
+
+/**
+ * Save or update a reminder note
+ */
+export async function saveUserReminder(userId: string | undefined, reminder: ReminderNote): Promise<void> {
+  const normUid = getNormalizedUserId(userId);
+  const ref = doc(db, "users", normUid, "reminders", reminder.id);
+  try {
+    await safeSetDoc(ref, reminder, { merge: true });
+  } catch (error) {
+    console.warn("Failed to save reminder to Firestore:", error);
+  }
+}
+
+/**
+ * Get user reminder notes
+ */
+export async function getUserReminders(userId: string | undefined, dashboardId?: string): Promise<ReminderNote[]> {
+  const normUid = getNormalizedUserId(userId);
+  try {
+    const col = collection(db, "users", normUid, "reminders");
+    const snap = await getDocs(col);
+    const list: ReminderNote[] = [];
+    snap.forEach((docSnap) => {
+      const data = docSnap.data() as ReminderNote;
+      if (!dashboardId || !data.dashboardId || data.dashboardId === dashboardId) {
+        list.push(data);
+      }
+    });
+    return list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  } catch (error) {
+    console.warn("Failed to fetch reminders from Firestore:", error);
+    return [];
+  }
+}
+
+/**
+ * Delete a reminder note
+ */
+export async function deleteUserReminder(userId: string | undefined, reminderId: string): Promise<void> {
+  const normUid = getNormalizedUserId(userId);
+  const ref = doc(db, "users", normUid, "reminders", reminderId);
+  try {
+    await deleteDoc(ref);
+  } catch (error) {
+    console.warn("Failed to delete reminder from Firestore:", error);
+  }
+}
+
+/**
+ * Save or update a study note
+ */
+export async function saveUserStudyNote(userId: string | undefined, note: StudyNote): Promise<void> {
+  const normUid = getNormalizedUserId(userId);
+  const ref = doc(db, "users", normUid, "notes", note.id);
+  try {
+    await safeSetDoc(ref, note, { merge: true });
+  } catch (error) {
+    console.warn("Failed to save study note to Firestore:", error);
+  }
+}
+
+/**
+ * Get user study notes
+ */
+export async function getUserStudyNotes(userId: string | undefined, dashboardId?: string): Promise<StudyNote[]> {
+  const normUid = getNormalizedUserId(userId);
+  try {
+    const col = collection(db, "users", normUid, "notes");
+    const snap = await getDocs(col);
+    const list: StudyNote[] = [];
+    snap.forEach((docSnap) => {
+      const data = docSnap.data() as StudyNote;
+      if (!dashboardId || !data.dashboardId || data.dashboardId === dashboardId) {
+        list.push(data);
+      }
+    });
+    return list;
+  } catch (error) {
+    console.warn("Failed to fetch study notes from Firestore:", error);
+    return [];
+  }
+}
+
+/**
+ * Delete a study note
+ */
+export async function deleteUserStudyNote(userId: string | undefined, noteId: string): Promise<void> {
+  const normUid = getNormalizedUserId(userId);
+  const ref = doc(db, "users", normUid, "notes", noteId);
+  try {
+    await deleteDoc(ref);
+  } catch (error) {
+    console.warn("Failed to delete study note from Firestore:", error);
   }
 }
 
