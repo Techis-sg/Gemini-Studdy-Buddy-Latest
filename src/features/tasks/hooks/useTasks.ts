@@ -50,6 +50,15 @@ export function useTasks(
   };
 
   const handleUpdateTask = async (taskId: string, updates: Partial<Task>) => {
+    // 1. Optimistic update immediately to remove any UI lag on check/uncheck or inline status edit
+    setTasks((prev) => {
+      const list = prev[activeDashboardId] || [];
+      return {
+        ...prev,
+        [activeDashboardId]: list.map((t) => (t.id === taskId ? { ...t, ...updates } : t)),
+      };
+    });
+
     try {
       const response = await apiFetch(`/api/task/${taskId}`, {
         method: "PUT",
@@ -75,6 +84,7 @@ export function useTasks(
       toast.success("Study target updated successfully!");
     } catch (err: any) {
       toast.error("Error: " + err.message);
+      await fetchDB(activeDashboardId, true);
     }
   };
 

@@ -71,7 +71,7 @@ export default function TasksGridView({
                     </h4>
                     {task.notes && (
                       <Tooltip
-                        position="top"
+                        position="bottom"
                         content={
                           <div className="max-w-xs text-left font-sans p-1">
                             <span className="font-bold text-amber-300 block mb-1">📝 Task Notes</span>

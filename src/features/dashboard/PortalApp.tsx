@@ -562,8 +562,8 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
               <div className="space-y-6">
                 {/* Dashboard Stats Hero Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Left Column: Plan Information / Self-Motivation */}
-                  <div className="md:col-span-2 bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm space-y-4">
+                  {/* Self-Motivation Banner */}
+                  <div className="md:col-span-3 bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
                         📂 SELF-MOTIVATION
@@ -596,62 +596,6 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
                         </p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Right Column: Overall Completion Meter */}
-                  <div className="bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm flex flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
-                        🔥 TARGET METERS
-                      </span>
-                      <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-800 mt-4">
-                        Overall Course Completed
-                      </h3>
-                    </div>
-
-                    {/* Progress Circle Visual */}
-                    <div className="flex items-center gap-4 py-3">
-                      <div className="relative w-16 h-16 flex items-center justify-center">
-                        <svg className="w-16 h-16 transform -rotate-90">
-                          <circle cx="32" cy="32" r="28" stroke="#E2E8F0" strokeWidth="6" fill="transparent" />
-                          <circle
-                            cx="32"
-                            cy="32"
-                            r="28"
-                            stroke="#6366F1"
-                            strokeWidth="6"
-                            fill="transparent"
-                            strokeDasharray={175}
-                            strokeDashoffset={
-                              175 - (175 * (currentTasks.length > 0 ? (currentTasks.filter(t => t.status === "Completed").length / currentTasks.length) * 100 : 0)) / 100
-                            }
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <span className="absolute text-xs font-mono font-extrabold text-slate-800">
-                          {currentTasks.length > 0
-                            ? Math.round((currentTasks.filter(t => t.status === "Completed").length / currentTasks.length) * 100)
-                            : 0}%
-                        </span>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-black text-slate-800">
-                          {currentTasks.filter(t => t.status === "Completed").length} / {currentTasks.length} Completed Tasks
-                        </p>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                          {currentTasks.filter(t => t.status === "In Progress").length} Tasks currently in progress
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setShowAIChatDrawer(true)}
-                      className="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 fill-white animate-pulse" />
-                      Ask AI Copilot
-                    </button>
                   </div>
                 </div>
 
@@ -882,13 +826,46 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
                             )}
                           </div>
                         </div>
+                      </div>
 
-                        {/* Reminders Card below Today's Study Plan */}
+                      {/* Right Side: 1st Quote of the Day, 2nd Reminders, 3rd Upcoming Schedule */}
+                      <div className="space-y-6">
+                        {/* 1st: Quote of the Day */}
+                        {(() => {
+                          const customMotivation = appSettings?.userMotivation || user?.motivation;
+                          const dailyQuote = STUDY_QUOTES[new Date().getDate() % STUDY_QUOTES.length];
+                          return (
+                            <div className="bg-gradient-to-br from-indigo-50/20 via-purple-50/10 to-white border border-slate-100 p-6 rounded-[24px] shadow-sm relative overflow-hidden group">
+                              <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 text-slate-100 group-hover:text-indigo-100 transition-all opacity-30 pointer-events-none">
+                                <SparklesIcon className="w-16 h-16 text-indigo-400" />
+                              </div>
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50/60 px-2.5 py-1 rounded-md">
+                                ✨ Quote of the Day
+                              </span>
+                              {customMotivation ? (
+                                <p className="text-xs font-bold text-slate-800 leading-relaxed mt-4 bg-indigo-50/40 p-3 rounded-xl border border-indigo-100/60">
+                                  "{customMotivation}"
+                                </p>
+                              ) : (
+                                <>
+                                  <p className="text-xs font-bold text-slate-700 italic leading-relaxed mt-4">
+                                    "{dailyQuote.text}"
+                                  </p>
+                                  <p className="text-[10px] font-mono font-bold text-indigo-600 mt-2">
+                                    — {dailyQuote.author}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* 2nd: Reminders Card */}
                         <div className="bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm space-y-4">
                           <div className="flex items-center justify-between">
                             <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                               <SparklesIcon className="w-4 h-4 text-amber-500" />
-                              Study Reminders & Sticky Notes
+                              Reminders
                             </h3>
                             <button
                               onClick={() => handleTabClick("notes")}
@@ -961,41 +938,8 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
                             )}
                           </div>
                         </div>
-                      </div>
 
-                      {/* Right Side: Inspiration (Motivation) Card FIRST, then Upcoming Schedule Card SECOND */}
-                      <div className="space-y-6">
-                        {/* Daily Study Inspiration Card / My Motivation Message */}
-                        {(() => {
-                          const customMotivation = appSettings?.userMotivation || user?.motivation;
-                          const dailyQuote = STUDY_QUOTES[new Date().getDate() % STUDY_QUOTES.length];
-                          return (
-                            <div className="bg-gradient-to-br from-indigo-50/20 via-purple-50/10 to-white border border-slate-100 p-6 rounded-[24px] shadow-sm relative overflow-hidden group">
-                              <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 text-slate-100 group-hover:text-indigo-100 transition-all opacity-30 pointer-events-none">
-                                <SparklesIcon className="w-16 h-16 text-indigo-400" />
-                              </div>
-                              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50/60 px-2.5 py-1 rounded-md">
-                                ✨ My Motivation Message
-                              </span>
-                              {customMotivation ? (
-                                <p className="text-xs font-bold text-slate-800 leading-relaxed mt-4 bg-indigo-50/40 p-3 rounded-xl border border-indigo-100/60">
-                                  "{customMotivation}"
-                                </p>
-                              ) : (
-                                <>
-                                  <p className="text-xs font-bold text-slate-700 italic leading-relaxed mt-4">
-                                    "{dailyQuote.text}"
-                                  </p>
-                                  <p className="text-[10px] font-mono font-bold text-indigo-600 mt-2">
-                                    — {dailyQuote.author}
-                                  </p>
-                                </>
-                              )}
-                            </div>
-                          );
-                        })()}
-
-                        {/* Upcoming Schedule Card SECOND */}
+                        {/* 3rd: Upcoming Schedule Card */}
                         <div className="bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm space-y-4">
                           <div className="flex items-center justify-between">
                             <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -1060,6 +1004,7 @@ export function PortalApp({ user, onLogout, onUserUpdate, appSettings, onSetting
                 onToggleReminder={handleToggleDashboardReminder}
                 onDeleteReminder={handleDeleteDashboardReminder}
                 onSaveReminder={handleSaveDashboardReminder}
+                onUpdateTask={handleUpdateTask}
               />
             )}
             {activeTab === "overview" && (

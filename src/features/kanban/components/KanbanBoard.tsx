@@ -287,21 +287,6 @@ export default function KanbanBoard({
                             {col.id === "completed" && <span className="text-emerald-500 mr-1 font-bold shrink-0">✓</span>}
                             {task.title}
                           </h4>
-                          {task.notes && (
-                            <Tooltip
-                              position="top"
-                              content={
-                                <div className="max-w-xs text-left font-sans p-1">
-                                  <span className="font-bold text-amber-300 block mb-1">📝 Task Notes</span>
-                                  <p className="text-slate-100 text-xs leading-relaxed whitespace-pre-wrap font-normal">{task.notes}</p>
-                                </div>
-                              }
-                            >
-                              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 px-1.5 py-0.5 rounded-md cursor-help shrink-0">
-                                📝
-                              </span>
-                            </Tooltip>
-                          )}
                         </div>
                         
                         {task.subjectId && (

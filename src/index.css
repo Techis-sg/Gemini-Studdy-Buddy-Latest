@@ -1,5 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Kalam:wght@300;400;700&display=swap');
 @import "tailwindcss";
+
+.font-handwriting {
+  font-family: 'Kalam', cursive !important;
+}
+
+.kalam-light {
+  font-family: "Kalam", cursive !important;
+  font-weight: 300 !important;
+  font-style: normal;
+}
+
+.kalam-regular {
+  font-family: "Kalam", cursive !important;
+  font-weight: 400 !important;
+  font-style: normal;
+  font-size: 16px !important;
+  line-height: 24px !important;
+}
+
+.kalam-bold {
+  font-family: "Kalam", cursive !important;
+  font-weight: 700 !important;
+  font-style: normal;
+}
 
 @variant dark (&:where(.dark, .dark *));
 @variant cosmic (&:where(.cosmic, .cosmic *));

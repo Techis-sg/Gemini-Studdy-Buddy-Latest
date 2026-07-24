@@ -104,13 +104,14 @@ export interface ReminderNote {
   date: string; // YYYY-MM-DD
   completed: boolean;
   color?: string; // e.g. "#fef08a"
+  isImportant?: boolean;
   createdAt: string;
 }
 
 export interface StudyNote {
   id: string;
   dashboardId?: string;
-  taskId: string; // e.g. "TSK-001" or task.id
+  taskId?: string; // e.g. "TSK-001" or task.id
   taskTitle?: string;
   subjectId?: string;
   subjectName?: string;
@@ -118,6 +119,7 @@ export interface StudyNote {
   color?: string; // e.g. "#fed7aa"
   tags?: string[];
   isFavorite?: boolean;
+  isImportant?: boolean;
   createdAt?: string;
 }
 

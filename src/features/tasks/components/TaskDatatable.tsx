@@ -65,6 +65,28 @@ export default function TaskDatatable({
     }
   };
 
+  // Dynamically calculate track category filter options based on user data
+  const availableTrackCategories = useMemo(() => {
+    const cats = new Set<string>();
+    tasks.forEach((t) => {
+      if (t.category) cats.add(t.category);
+    });
+    subjects.forEach((s) => {
+      if (s.block) cats.add(s.block);
+    });
+    const list = Array.from(cats);
+    if (list.length === 0) {
+      return [{ value: "all", label: "All Tracks" }];
+    }
+    return [
+      { value: "all", label: "All Tracks" },
+      ...list.map((cat) => ({
+        value: cat,
+        label: cat === "Block 1 - GATE" ? "Block 1 - Core Theory" : cat === "Block 2 - Placements" ? "Block 2 - Projects / Applied" : cat,
+      })),
+    ];
+  }, [tasks, subjects]);
+
   // Pre-calculate canonical Task ID for each task in the full tasks list
   const canonicalTaskIds = useMemo(() => {
     const map = new Map<string, string>();
@@ -232,13 +254,7 @@ export default function TaskDatatable({
             label="Track Category"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            options={[
-              { value: "all", label: "All Tracks" },
-              { value: "Block 1 - GATE", label: "Block 1 - Core Theory" },
-              { value: "Block 2 - Placements", label: "Block 2 - Projects / Applied" },
-              { value: "DSA", label: "DSA Daily" },
-              { value: "General", label: "General" },
-            ]}
+            options={availableTrackCategories}
           />
         </div>
 

@@ -18,6 +18,77 @@ interface TasksListViewProps {
   onViewDetails: (task: Task) => void;
 }
 
+function StatusCell({ task, onUpdateTask }: { task: Task; onUpdateTask: (id: string, updates: Partial<Task>) => void }) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <select
+        autoFocus
+        value={task.status}
+        onChange={(e) => {
+          const nextStatus = e.target.value as Task["status"];
+          const nextCol = nextStatus === "Completed" ? "completed" : "today";
+          onUpdateTask(task.id, { status: nextStatus, boardColumnId: nextCol });
+          setEditing(false);
+        }}
+        onBlur={() => setEditing(false)}
+        className="text-[10px] p-1 font-bold rounded-lg border border-indigo-400 bg-white text-slate-800 shadow-sm focus:outline-none cursor-pointer"
+      >
+        <option value="Not Started">Not Started</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+    );
+  }
+
+  return (
+    <span
+      onDoubleClick={() => setEditing(true)}
+      onClick={() => setEditing(true)}
+      title="Click or double-click to change status inline"
+      className={`text-[10px] px-2.5 py-1 font-bold uppercase rounded-lg shadow-sm border border-slate-100/20 inline-block cursor-pointer hover:scale-105 transition-all ${getStatusColor(task.status)}`}
+    >
+      {task.status}
+    </span>
+  );
+}
+
+function PriorityCell({ task, onUpdateTask }: { task: Task; onUpdateTask: (id: string, updates: Partial<Task>) => void }) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <select
+        autoFocus
+        value={task.priority}
+        onChange={(e) => {
+          const nextPriority = e.target.value as Task["priority"];
+          onUpdateTask(task.id, { priority: nextPriority });
+          setEditing(false);
+        }}
+        onBlur={() => setEditing(false)}
+        className="text-[10px] p-1 font-bold rounded-lg border border-indigo-400 bg-white text-slate-800 shadow-sm focus:outline-none cursor-pointer"
+      >
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+    );
+  }
+
+  return (
+    <span
+      onDoubleClick={() => setEditing(true)}
+      onClick={() => setEditing(true)}
+      title="Click or double-click to change priority inline"
+      className={`text-[10px] px-2.5 py-1 font-bold uppercase rounded-lg shadow-sm border border-slate-100/20 inline-block cursor-pointer hover:scale-105 transition-all ${getPriorityColor(task.priority)}`}
+    >
+      {task.priority}
+    </span>
+  );
+}
+
 export default function TasksListView({
   tasks,
   subjects,
@@ -32,23 +103,24 @@ export default function TasksListView({
 }: TasksListViewProps) {
   const columns = useMemo<ColumnDef<Task>[]>(() => [
     {
-      id: "select",
-      header: "✓",
-      size: 50,
+      id: "task",
+      header: "Task",
+      size: 360,
       cell: ({ row }) => {
         const task = row.original;
         const isCompleted = task.status === "Completed";
+        const displayTaskId = getFormattedTaskId(task, row.index + (currentPage - 1) * itemsPerPage);
         const handleToggleStatus = () => {
           const nextStatus = isCompleted ? "Not Started" : "Completed";
           const nextCol = nextStatus === "Completed" ? "completed" : "today";
           onUpdateTask(task.id, { status: nextStatus, boardColumnId: nextCol });
         };
         return (
-          <div className="flex items-center justify-center">
+          <div className="flex items-start gap-3 py-1">
             <button
               type="button"
               onClick={handleToggleStatus}
-              className={`w-5 h-5 border rounded-md flex items-center justify-center cursor-pointer select-none active:scale-95 transition-all shadow-sm ${
+              className={`w-5 h-5 mt-0.5 shrink-0 border rounded-md flex items-center justify-center cursor-pointer select-none active:scale-95 transition-all shadow-sm ${
                 isCompleted
                   ? "bg-emerald-500 border-emerald-500 text-white font-bold"
                   : "bg-white border-slate-300 hover:bg-slate-50"
@@ -57,14 +129,56 @@ export default function TasksListView({
             >
               {isCompleted ? "✓" : ""}
             </button>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="font-mono text-[11px] font-bold text-indigo-600 block">
+                {displayTaskId}
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span
+                  onClick={() => onViewDetails(task)}
+                  className={`font-bold text-sm block text-slate-800 break-words whitespace-normal cursor-pointer hover:text-indigo-600 hover:underline transition-colors ${
+                    isCompleted ? "line-through text-slate-400 font-normal" : ""
+                  }`}
+                >
+                  {task.title}
+                </span>
+                {task.notes && (
+                  <Tooltip
+                    position="bottom"
+                    content={
+                      <div className="max-w-xs text-left font-sans p-1">
+                        <span className="font-bold text-amber-300 block mb-1">📝 Task Notes</span>
+                        <p className="text-slate-100 text-xs leading-relaxed whitespace-pre-wrap font-normal">{task.notes}</p>
+                      </div>
+                    }
+                  >
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-md cursor-help shadow-2xs transition-all">
+                      📝 Note
+                    </span>
+                  </Tooltip>
+                )}
+              </div>
+              {task.attachments && task.attachments.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {task.attachments.map((a) => (
+                    <span
+                      key={a.id}
+                      className="text-[9px] bg-slate-100 border border-slate-200 px-2 py-0.5 font-mono rounded-md flex items-center gap-1 shadow-sm text-slate-600"
+                    >
+                      📎 {a.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
       },
     },
     {
       accessorKey: "date",
-      header: "Date",
-      size: 150,
+      header: "Scheduled Date",
+      size: 140,
       cell: ({ row }) => {
         const task = row.original;
         const todayStr = (() => {
@@ -88,97 +202,16 @@ export default function TasksListView({
       },
     },
     {
-      id: "serial_id",
-      header: "Task ID",
-      size: 90,
-      cell: ({ row }) => {
-        const task = row.original;
-        const displayTaskId = getFormattedTaskId(task, row.index + (currentPage - 1) * itemsPerPage);
-        return (
-          <div className="flex flex-col gap-0.5 font-mono text-[11px] font-bold text-indigo-600">
-            <span>{displayTaskId}</span>
-          </div>
-        );
-      }
-    },
-    {
-      accessorKey: "title",
-      header: "Task Name",
-      size: 320,
-      cell: ({ row }) => {
-        const task = row.original;
-        const isCompleted = task.status === "Completed";
-        return (
-          <div className="space-y-1 max-w-md relative group">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span
-                onClick={() => onViewDetails(task)}
-                className={`font-bold text-sm block text-slate-800 break-words whitespace-normal cursor-pointer hover:text-indigo-600 hover:underline transition-colors ${isCompleted ? "line-through text-slate-400 font-normal" : ""}`}
-              >
-                {task.title}
-              </span>
-              {task.notes && (
-                <Tooltip
-                  position="top"
-                  content={
-                    <div className="max-w-xs text-left font-sans p-1">
-                      <span className="font-bold text-amber-300 block mb-1">📝 Task Notes</span>
-                      <p className="text-slate-100 text-xs leading-relaxed whitespace-pre-wrap font-normal">{task.notes}</p>
-                    </div>
-                  }
-                >
-                  <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-md cursor-help shadow-2xs transition-all">
-                    📝 Note
-                  </span>
-                </Tooltip>
-              )}
-            </div>
-            {task.description && (
-              <p className="text-slate-500 font-mono text-xs leading-relaxed break-words whitespace-normal">
-                {task.description}
-              </p>
-            )}
-            {task.attachments && task.attachments.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {task.attachments.map((a) => (
-                  <span
-                    key={a.id}
-                    className="text-[9px] bg-slate-100 border border-slate-200 px-2 py-0.5 font-mono rounded-md flex items-center gap-1 shadow-sm text-slate-600"
-                  >
-                    📎 {a.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
       accessorKey: "status",
       header: "Status",
-      size: 110,
-      cell: ({ row }) => {
-        const task = row.original;
-        return (
-          <span className={`text-[10px] px-2.5 py-1 font-bold uppercase rounded-lg shadow-sm border border-slate-100/20 inline-block ${getStatusColor(task.status)}`}>
-            {task.status}
-          </span>
-        );
-      },
+      size: 120,
+      cell: ({ row }) => <StatusCell task={row.original} onUpdateTask={onUpdateTask} />,
     },
     {
       accessorKey: "priority",
       header: "Priority",
-      size: 100,
-      cell: ({ row }) => {
-        const task = row.original;
-        return (
-          <span className={`text-[10px] px-2.5 py-1 font-bold uppercase rounded-lg shadow-sm border border-slate-100/20 inline-block ${getPriorityColor(task.priority)}`}>
-            {task.priority}
-          </span>
-        );
-      },
+      size: 110,
+      cell: ({ row }) => <PriorityCell task={row.original} onUpdateTask={onUpdateTask} />,
     },
     {
       accessorKey: "timeSpentMinutes",
@@ -197,20 +230,20 @@ export default function TasksListView({
     },
     {
       id: "association",
-      header: "Association",
-      size: 180,
+      header: "TAGS",
+      size: 170,
       cell: ({ row }) => {
         const task = row.original;
         const subName = getSubjectName(task.subjectId, subjects);
         return (
-          <div className="flex flex-col gap-1 items-start max-w-[170px]">
+          <div className="flex flex-col gap-1 items-start max-w-[160px]">
             {task.category && (
               <span className={`text-[9px] px-2 py-0.5 font-bold uppercase rounded-md shadow-sm border border-slate-100/20 ${getCategoryBg(task.category)}`}>
                 {task.category}
               </span>
             )}
             {subName ? (
-              <span className="bg-indigo-50/70 text-indigo-950 border border-indigo-100/40 rounded-md px-2 py-0.5 font-sans font-bold text-[11px] shadow-sm truncate max-w-[160px]">
+              <span className="bg-indigo-50/70 text-indigo-950 border border-indigo-100/40 rounded-md px-2 py-0.5 font-sans font-bold text-[11px] shadow-sm truncate max-w-[150px]">
                 📚 {subName}
               </span>
             ) : (
@@ -223,7 +256,7 @@ export default function TasksListView({
     {
       id: "actions",
       header: "Actions",
-      size: 100,
+      size: 90,
       cell: ({ row }) => {
         const task = row.original;
         return (
